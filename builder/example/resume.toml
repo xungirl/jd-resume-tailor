@@ -1,0 +1,124 @@
+# Example bullet bank for a FICTIONAL candidate. Replace everything with your own facts.
+#
+# Rules this file is built around:
+#   * every bullet is something you can defend in an interview, with a number you measured
+#   * bullets have short keys so a variant can pick them: projects = [{key="kv", bullets=["core","chaos"]}]
+#   * write MORE bullets than fit on a page; variants choose, the bank never lies
+
+[profile]
+name = "Alex Rivera"
+file_prefix = "Alex_Rivera_Resume"          # output: Alex_Rivera_Resume_<variant>.pdf
+location = "Seattle, WA"
+availability = "Summer 2027 internship, full-time (12 weeks); returning to school in Fall 2027"
+links = [
+  { label = "alex@example.com", url = "mailto:alex@example.com" },
+  { label = "linkedin.com/in/example", url = "https://www.linkedin.com/in/example" },
+  { label = "github.com/example", url = "https://github.com/example" },
+]
+
+[[education]]
+school = "Example State University"
+location = "Seattle, WA"
+degree = "Master of Science in Computer Science | GPA: 3.9/4.0"
+dates = "Expected Dec 2027"
+lines = ["<b>Coursework:</b> Algorithms, Distributed Systems, Databases"]
+
+[[education]]
+school = "Example College"
+location = "Portland, OR"
+degree = "Bachelor of Science in Information Systems"
+dates = "Sep 2020 - Jun 2024"
+
+# ------------------------------------------------------------------ skills: one line each, grouped
+[skills.lang_java]
+label = "Languages"
+text = "Java, Go, Python, SQL, TypeScript"
+[skills.lang_go]
+label = "Languages"
+text = "Go, Java, Python, SQL, TypeScript"
+[skills.dist]
+label = "Distributed Systems"
+text = "Raft, leader election, log replication, write-ahead logs, rate limiting, chaos testing"
+[skills.backend]
+label = "Backend"
+text = "REST, gRPC, WebSockets, Spring Boot, FastAPI; PostgreSQL, Redis"
+[skills.cloud]
+label = "Cloud &amp; DevOps"
+text = "AWS (ECS, RDS, S3, IAM), Docker, Kubernetes, GitHub Actions CI/CD, Terraform"
+[skills.ai]
+label = "AI / LLM"
+text = "RAG, embeddings, retrieval evaluation, tool-calling agents, LLM evaluation harnesses"
+[skills.test]
+label = "Testing"
+text = "JUnit 5, pytest, Go race detector, fault injection, load testing (p50/p99)"
+
+# ------------------------------------------------------------------ projects: bullet bank
+[projects.kv]
+name = "tinykv"
+desc = "Raft-Replicated Key-Value Store in Go"
+url = "https://github.com/example/tinykv"
+dates = "Oct 2026"
+[projects.kv.bullets]
+core = "Built a Raft key-value store in Go (stdlib only): leader election, log replication, and a <b>CRC-checked write-ahead log</b> with fsync and group commit."
+chaos = "Lost <b>0 of 10,000 acknowledged writes</b> across <b>50 SIGKILL faults</b> in a chaos harness that reads every acked key back through the log."
+perf = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> (1 to 64 clients) via group commit; measured <b>250 ms median</b> leader failover."
+
+[projects.gateway]
+name = "throttle"
+desc = "Rate-Limiting API Gateway in Go"
+url = "https://github.com/example/throttle"
+[projects.gateway.bullets]
+algo = "Implemented <b>4 rate-limiting algorithms</b> (token bucket, fixed window, sliding log, sliding counter) behind one interface with in-memory and Redis backends."
+redis = "Used <b>atomic Redis Lua scripts</b> so 3 gateway instances enforced a shared 1,000 req/s limit exactly under load."
+
+[projects.shop]
+name = "Shopline"
+desc = "E-Commerce Backend (Spring Boot, PostgreSQL, AWS)"
+url = "https://github.com/example/shopline"
+[projects.shop.bullets]
+api = "Designed <b>25 REST endpoints</b> and a normalized PostgreSQL schema for carts, orders and inventory with optimistic locking."
+test = "Reached <b>90% line coverage</b> with JUnit and Testcontainers; CI on GitHub Actions blocks merges on failing tests."
+aws = "Deployed with Docker on <b>AWS ECS Fargate</b> behind an ALB with RDS PostgreSQL, defined as code in Terraform."
+
+[projects.rag]
+name = "DocQA"
+desc = "Retrieval-Augmented Q&amp;A over Support Tickets"
+url = "https://github.com/example/docqa"
+[projects.rag.bullets]
+eval = "Benchmarked <b>12 retrieval configurations</b> on a 60-query test set, raising <b>Recall@5 from 65% to 95%</b> with hybrid BM25 + vector search."
+lat = "Cut p50 answer latency from <b>9.0s to 3.5s</b> by caching embeddings and removing a redundant retrieval call."
+
+[[experience]]
+company = "Example Logistics Co."
+location = "Portland, OR"
+title = "Data Analyst Intern"
+dates = "Jan 2024 - May 2024"
+bullets = [
+  "Wrote <b>SQL</b> pipelines joining 3 operational systems for daily reporting; built dashboards for 3 KPIs used in weekly planning.",
+]
+
+# ------------------------------------------------------------------ variants: one per JD family
+[variants.backend]            # general backend SWE
+skills = ["lang_java", "backend", "dist", "cloud", "test"]
+projects = [
+  { key = "shop", bullets = ["api", "test", "aws"] },
+  { key = "kv", bullets = ["core", "chaos"] },
+  { key = "gateway", bullets = ["algo", "redis"] },
+]
+
+[variants.infra]              # storage / distributed systems / infra, Go shops
+availability = true           # JD asked for start/end dates
+skills = ["lang_go", "dist", "cloud", "test", "backend"]
+projects = [
+  { key = "kv", bullets = ["core", "chaos", "perf"] },
+  { key = "gateway", bullets = ["algo", "redis"] },
+  { key = "shop", bullets = ["aws"] },
+]
+
+[variants.ai]                 # AI / LLM application engineering
+skills = ["ai", "lang_java", "backend", "cloud"]
+projects = [
+  { key = "rag", bullets = ["eval", "lat"] },
+  { key = "shop", bullets = ["api", "aws"] },
+  { key = "kv", bullets = ["core", "chaos"] },
+]
