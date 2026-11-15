@@ -1,0 +1,67 @@
+---
+name: jd-resume-tailor
+description: Tailor a one-page resume to a specific job description (JD) without inventing anything. Fetches the JD from the posting URL (Greenhouse, Ashby, Lever, Workday, Oracle, SmartRecruiters), checks hard eligibility constraints, reorders and selects true bullets from the user's bullet bank into a new variant, builds and visually checks a one-page PDF, gives a neutrally named copy to upload, and helps with the application form (why-us answers, autofill pitfalls). Use when the user pastes a job link or JD and says "tailor my resume", "改简历适合这个岗位", "按 JD 微调简历", "这个岗位用哪个简历", or pastes an application form / review page to check.
+---
+
+# jd-resume-tailor
+
+Goal: for one job posting, produce the strongest **honest** one-page resume the user already has the facts for, and get the application submitted cleanly. Tailoring means **choosing and ordering**, not writing new claims.
+
+## 0. Setup (read first)
+
+Look for the user's config at `~/.config/jd-resume-tailor/config.md`. It says where their bullet bank lives, how to build, where PDFs go, and (optionally) a tracker to record applications in. If it does not exist, ask once for:
+- the resume source: a bullet-bank file (this repo's `builder/` TOML format, see `builder/example/resume.toml`) **or** their own build script;
+- the output folder;
+then write the config so the next run skips the questions.
+
+## 1. Get the JD
+
+- Run `python3 <skill_dir>/fetch_jd.py "<url>"`. It follows referral/short links, detects the ATS, and prints title, location, **OPEN / NOT FOUND**, and the JD text. Exit code 2 = posting gone: tell the user before doing any work.
+- If the fetcher can't read it (custom career site), ask the user to paste the JD. Never guess a JD from the job title.
+
+## 2. Read it like a recruiter
+
+Extract, in this order:
+1. **Hard constraints** (pass/fail): graduation window, degree level, "N semesters remaining after the internship", program dates / duration, onsite city, work authorization or "no sponsorship", application limits ("max 2 applications per cycle"), "must have prior internship".
+2. **Must-haves**: languages, domains, fundamentals.
+3. **Nice-to-haves**: named technologies, domains (e.g. "vector DB", "CI/CD", "AI coding assistants").
+4. **What the team actually builds** (one sentence). This decides which project leads.
+
+Report constraint conflicts plainly (e.g. "JD says 2 semesters left after the internship; you have 1, but its graduation window explicitly includes Dec 2027, so applying is fine"). If a hard constraint fails, say so and suggest skipping.
+
+## 3. Map JD → bullet bank
+
+- Score each project in the bank by how directly it demonstrates the "what the team builds" sentence, then must-haves, then nice-to-haves. The best match leads, with the most bullets.
+- Reorder the **Languages** line so the JD's language comes first; pick skill groups whose keywords appear in the JD; keep every skill line to **one line**.
+- Drop projects that are impressive but off-topic for this team (they cost space and dilute the story).
+- Mention a strong but non-obvious hook if there is one (e.g. the user's degree matches the company's domain) for the form's "why us" question, not for the resume.
+
+### Truth rules (non-negotiable)
+- Only reuse bullets that already exist in the bank, or rewrite one using facts you **verify in the repo or its benchmark/results file** (grep the code; read the README/BENCHMARK). Cite where the fact came from when you add a new bullet to the bank.
+- Never add a technology to skills because the JD wants it. If the JD's keyword has no evidence (e.g. C++, Kubernetes), leave it out and tell the user it's a gap to prepare an honest interview answer for, or a project to build.
+- Never change numbers, dates, titles or degrees. Never back-date a project.
+- If the user asks you to fabricate, decline and offer the honest alternative (reorder, or build the thing for real).
+
+## 4. Build and check
+
+- Add a new variant (named after the company/role family) instead of editing an existing one. If the build script is shared with other sessions, make **targeted** edits (insert one block), never rewrite the whole file. Back it up first.
+- Build. Treat `OVERFLOW` as a failure: cut the weakest bullet. If there is room for 2+ lines, add the next most relevant true bullet rather than leaving white space.
+- Render to PNG (`pdftoppm -r 110 -png -singlefile file.pdf out`) and **look at it**: one page, no orphan words on skill lines, headings not wrapped, links present.
+- If the JD asks for availability dates, turn on the availability line.
+
+## 5. Hand off
+
+- Copy the PDF to a neutral name (e.g. `submit_<variant>/<First>_<Last>_Resume.pdf`): the variant name ("Acme_Storage") must not reach another company's recruiter.
+- Tell the user, briefly: which project leads and why (map to JD lines), what was dropped, which JD keywords are honest gaps, any constraint caveats.
+
+## 6. The application form
+
+When the user pastes a form or a Workday "Review" page, check it against `checklist.md` in this folder. The usual catches:
+- ATS **autofill** stuffs project bullets into a job's "Role Description", picks a wrong field of study, leaves start dates blank. Fix these: they become false statements once the user signs the certification checkbox.
+- "Why us" answers: build them from the user's real story and real numbers; ask before adding feelings or events you can't verify ("I still remember..." only if true).
+- Sponsorship / work authorization questions: answer truthfully, every time.
+- Before applying, check the company's own portal for an existing application to the same posting (duplicates look bad and tailoring is wasted).
+
+## 7. Record
+
+If the config names a tracker (Notion database, spreadsheet, Markdown table), record: company, role, link, date, which variant was used. Note company-level application limits you learned from the JD so the next run respects them.
