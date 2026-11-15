@@ -1,0 +1,10 @@
+{
+  "name": "jd-resume-tailor",
+  "version": "1.0.0",
+  "description": "Tailor a one-page resume to a job description without making anything up: JD fetcher for 6 ATSs, bullet-bank resume builder, application-form checklist.",
+  "author": { "name": "xungirl", "url": "https://github.com/xungirl" },
+  "homepage": "https://github.com/xungirl/jd-resume-tailor",
+  "repository": "https://github.com/xungirl/jd-resume-tailor",
+  "license": "MIT",
+  "keywords": ["resume", "job-search", "internship", "ats", "career"]
+}
