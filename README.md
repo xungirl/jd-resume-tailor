@@ -1,12 +1,36 @@
 # jd-resume-tailor
 
-A [Claude Code](https://claude.com/claude-code) skill (plus two small scripts) for tailoring a one-page resume to a specific job description **without making anything up**.
+**Paste a job link. Get the best honest one-page resume you already have the facts for.**
 
-You keep every true bullet you have in one *bullet bank*. For each job, the skill reads the JD, picks and orders the bullets that match what that team builds, builds a one-page PDF, checks it, and helps you get the application form right.
+A [Claude Code](https://claude.com/claude-code) plugin that tailors your resume to each job description by **choosing and reordering your real bullets**, never by inventing new ones. It reads the JD straight from the ATS, checks the eligibility fine print, builds a one-page PDF, and then checks your application form for the false statements that autofill sneaks in.
 
-![example output](docs/example_infra.png)
+![Same bullet bank, two postings, two different resumes](docs/same_bank_two_jds.png)
 
-<sub>Example output for a fictional candidate (`builder/example/resume.toml`, `infra` variant).</sub>
+<sub>Same bullet bank, two job postings. The backend posting gets the API project first; the AI posting gets the retrieval-evaluation project first and an AI skills line on top. Fictional candidate, see `builder/example/resume.toml`.</sub>
+
+```
+/plugin install jd-resume-tailor --marketplace xungirl/jd-resume-tailor
+```
+
+Then, in Claude Code: *"tailor my resume for https://job-boards.greenhouse.io/acme/jobs/123"*
+
+## What it will not do
+
+Most "AI resume" tools make you look better by writing things you didn't do. Recruiters and interviewers catch that, and the form you sign at the end says it's all true. This one has rules:
+
+- It **only reuses bullets from your bank**, or rewrites one with a fact it has verified in your repo or benchmark file.
+- It **never adds a skill because the JD wants it.** A JD keyword you have no evidence for is reported to you as a gap to prepare for, not slipped into the PDF.
+- It **never changes numbers, dates, titles, or degrees**, and it won't back-date a project.
+- It **answers sponsorship and work-authorization questions truthfully**, every time.
+
+## What it does that saves you time
+
+- **Reads the JD from the source.** `fetch_jd.py` pulls the posting from Greenhouse, Ashby, Lever, Workday, Oracle Recruiting Cloud, or SmartRecruiters through their public JSON endpoints, follows referral and short links, and tells you if the posting is already closed before you spend 20 minutes on it.
+- **Catches the fine print.** Graduation windows, "two semesters remaining after the internship", fixed program dates, onsite-only, "you may apply to at most 2 roles across our affiliates per cycle". It flags conflicts before you apply.
+- **Leads with what this team builds.** One sentence on the team's actual work decides which project goes first. A storage team sees your write-ahead log; a product team sees your API design.
+- **Stays one page, and looks at it.** The builder fails on overflow, warns when a skills line wraps, and Claude renders the PDF and checks it visually.
+- **Neutral filenames.** The upload copy is `First_Last_Resume.pdf`, so "Acme_Storage" in a filename never reaches a different company's recruiter.
+- **Checks the form.** Workday-style autofill pastes your project bullets into a past job's description, picks the wrong field of study, leaves start dates blank. Paste the review page and it walks `checklist.md` before you hit Submit.
 
 ## Why
 
@@ -20,15 +44,22 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 
 | Path | What it does |
 |---|---|
-| `skill/jd-resume-tailor/SKILL.md` | The workflow Claude follows: fetch JD → hard constraints → map to bullet bank → build → visual check → neutral filename → form review → record |
-| `skill/jd-resume-tailor/fetch_jd.py` | Gets the JD as text from a posting URL through each ATS's public JSON endpoint: Greenhouse, Ashby, Lever, Workday, Oracle Recruiting Cloud, SmartRecruiters. Follows referral/short links, reports if the posting is closed. Standard library only. |
-| `skill/jd-resume-tailor/checklist.md` | Application form checklist: autofill damage, truthful answers, duplicates, application limits |
+| `skills/jd-resume-tailor/SKILL.md` | The workflow Claude follows: fetch JD → hard constraints → map to bullet bank → build → visual check → neutral filename → form review → record |
+| `skills/jd-resume-tailor/fetch_jd.py` | Gets the JD as text from a posting URL through each ATS's public JSON endpoint: Greenhouse, Ashby, Lever, Workday, Oracle Recruiting Cloud, SmartRecruiters. Follows referral/short links, reports if the posting is closed. Standard library only. |
+| `skills/jd-resume-tailor/checklist.md` | Application form checklist: autofill damage, truthful answers, duplicates, application limits |
 | `builder/build_resume.py` | One-page resume builder (ReportLab) driven by a TOML bullet bank. Fails on overflow, warns when a skills line wraps. |
 | `builder/example/resume.toml` | A complete example bank with 3 variants (fictional person) |
 | `config.example.md` | Template for your personal config (paths stay on your machine) |
+| `.claude-plugin/` | Plugin + marketplace manifests for `/plugin install` |
 
 ## Quick start
 
+**As a plugin (recommended):**
+```
+/plugin install jd-resume-tailor --marketplace xungirl/jd-resume-tailor
+```
+
+**Or clone it** (to hack on it, or to use the builder and fetcher on their own):
 ```bash
 git clone https://github.com/xungirl/jd-resume-tailor.git
 cd jd-resume-tailor
@@ -40,7 +71,7 @@ uv run --with reportlab python build_resume.py example/resume.toml
 # -> example/out/Alex_Rivera_Resume_{backend,infra,ai}.pdf
 
 # try the JD fetcher
-python3 ../skill/jd-resume-tailor/fetch_jd.py "https://job-boards.greenhouse.io/<company>/jobs/<id>"
+python3 ../skills/jd-resume-tailor/fetch_jd.py "https://job-boards.greenhouse.io/<company>/jobs/<id>"
 ```
 
 Then copy `builder/example/resume.toml` somewhere private, replace it with your own facts, and copy `config.example.md` to `~/.config/jd-resume-tailor/config.md` with your paths. In Claude Code, paste a job link and say *"tailor my resume for this"*.
@@ -79,4 +110,4 @@ MIT
 
 **流程：** 抓 JD（6 种招聘系统的公开接口，顺便判断岗位还开不开）→ 先看硬性条件（毕业时间、剩几个学期、实习日期、限投数量）→ 用一句话概括「这个组做什么」，最能证明这一点的项目放第一 → 生成新版本，超过一页算失败，有空位就补下一条真实的 bullet → 转成图片检查 → 复制一份文件名不带公司名的 → 检查申请表 → 记录投递。
 
-**用法：** `./install.sh` 安装，把 `builder/example/resume.toml` 换成你自己的内容，在 Claude Code 里贴岗位链接，说「按这个 JD 改简历」。
+**用法：** 在 Claude Code 里运行 `/plugin install jd-resume-tailor --marketplace xungirl/jd-resume-tailor`（或者克隆后 `./install.sh`），把 `builder/example/resume.toml` 换成你自己的内容，在 Claude Code 里贴岗位链接，说「按这个 JD 改简历」。
