@@ -13,8 +13,10 @@ Checks on every build:
   * OVERFLOW  - content runs past one page (exit code 1)
   * WRAP      - a skills line wraps to 2 lines (warning; recruiters scan one line per group)
 
-Fonts: Helvetica by default. Set FONT_DIR to a folder with Carlito-{Regular,Bold,Italic,BoldItalic}.ttf
-(metric-compatible with Calibri, SIL OFL) for a nicer look.
+Fonts are embedded in the PDF. Set FONT_DIR to a folder with Carlito-{Regular,Bold,Italic,BoldItalic}.ttf
+(metric-compatible with Calibri, SIL OFL) for a nicer look; otherwise the builder embeds Liberation Sans
+or Arial (both metric-compatible with Helvetica, so page fit is unchanged). If none is found it falls back
+to bare Helvetica and warns. NO_EMBED=1 forces bare Helvetica.
 """
 import argparse
 import os
@@ -38,16 +40,38 @@ BOTTOM = 28
 BLACK = HexColor('#151515')
 LINK = '#183A70'
 
+STYLES = ('regular', 'bold', 'italic', 'bolditalic')
+
+
+def _font_candidates():
+    """TrueType families to EMBED in the PDF, best first: Carlito from FONT_DIR, then a
+    Helvetica-metric sans the OS already has (Liberation Sans on Linux, Arial on macOS/Windows).
+    Embedding matters: with bare Helvetica the PDF only names the font, and viewers or ATS
+    parsers without it substitute one (poppler, for instance, renders the bold as regular)."""
+    fd = os.environ.get('FONT_DIR')
+    if fd:
+        d = Path(fd).expanduser()
+        yield 'Carlito', [d / f'Carlito-{s}.ttf' for s in ('Regular', 'Bold', 'Italic', 'BoldItalic')]
+    for d in ('/usr/share/fonts/truetype/liberation', '/usr/share/fonts/truetype/liberation2',
+              '/usr/share/fonts/liberation-sans', '/usr/share/fonts/liberation'):
+        yield 'LiberationSans', [Path(d) / f'LiberationSans-{s}.ttf' for s in ('Regular', 'Bold', 'Italic', 'BoldItalic')]
+    mac = Path('/System/Library/Fonts/Supplemental')
+    yield 'Arial', [mac / f for f in ('Arial.ttf', 'Arial Bold.ttf', 'Arial Italic.ttf', 'Arial Bold Italic.ttf')]
+    win = Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts'
+    yield 'Arial', [win / f for f in ('arial.ttf', 'arialbd.ttf', 'ariali.ttf', 'arialbi.ttf')]
+
+
 FONT = {'regular': 'Helvetica', 'bold': 'Helvetica-Bold', 'italic': 'Helvetica-Oblique', 'bolditalic': 'Helvetica-BoldOblique'}
-pdfmetrics.registerFontFamily('Helvetica', normal='Helvetica', bold='Helvetica-Bold',
-                              italic='Helvetica-Oblique', boldItalic='Helvetica-BoldOblique')  # makes <b>/<i> work
-fd = os.environ.get('FONT_DIR')
-if fd and (Path(fd).expanduser() / 'Carlito-Regular.ttf').exists():
-    for style in ('Regular', 'Bold', 'Italic', 'BoldItalic'):
-        pdfmetrics.registerFont(TTFont(f'Carlito-{style}', str(Path(fd).expanduser() / f'Carlito-{style}.ttf')))
-    pdfmetrics.registerFontFamily('Carlito', normal='Carlito-Regular', bold='Carlito-Bold',
-                                  italic='Carlito-Italic', boldItalic='Carlito-BoldItalic')
-    FONT = {'regular': 'Carlito-Regular', 'bold': 'Carlito-Bold', 'italic': 'Carlito-Italic', 'bolditalic': 'Carlito-BoldItalic'}
+FONT_EMBEDDED = False
+for fam, files in ([] if os.environ.get('NO_EMBED') else _font_candidates()):
+    if all(f.exists() for f in files):
+        names = {s: f'{fam}-{s}' for s in STYLES}
+        for s, f in zip(STYLES, files):
+            pdfmetrics.registerFont(TTFont(names[s], str(f)))
+        FONT, FONT_EMBEDDED = names, True
+        break
+pdfmetrics.registerFontFamily(FONT['regular'], normal=FONT['regular'], bold=FONT['bold'],
+                              italic=FONT['italic'], boldItalic=FONT['bolditalic'])  # makes <b>/<i> work
 
 
 def link(url, label):
@@ -61,7 +85,7 @@ def build(data, name, spec, outdir):
         'contact': ParagraphStyle('contact', fontName=FONT['regular'], fontSize=9.6, leading=12, alignment=1, textColor=BLACK),
         'title': ParagraphStyle('title', fontName=FONT['bold'], fontSize=22, leading=24, alignment=1, textColor=BLACK),
     }
-    c = canvas.Canvas(str(out), pagesize=(WIDTH, HEIGHT), pageCompression=1)
+    c = canvas.Canvas(str(out), pagesize=(WIDTH, HEIGHT), pageCompression=1, initialFontName=FONT['regular'])
     c.setTitle(f"{data['profile']['name']} Resume")
     c.setAuthor(data['profile']['name'])
     y = [757]
@@ -153,6 +177,10 @@ def main():
     data = tomllib.loads(Path(a.bank).read_text())
     outdir = Path(os.environ.get('OUTDIR', Path(a.bank).parent / 'out')).expanduser()
     outdir.mkdir(parents=True, exist_ok=True)
+    print(f"font: {FONT['regular'].rsplit('-', 1)[0]} ({'embedded' if FONT_EMBEDDED else 'NOT embedded'})")
+    if not FONT_EMBEDDED:
+        print('   warning: fonts are not embedded; some viewers and ATS parsers will substitute them. '
+              'Set FONT_DIR to a Carlito folder or install Liberation Sans.')
     names = a.variant or list(data['variants'])
     unknown = [n for n in names if n not in data['variants']]
     if unknown:
