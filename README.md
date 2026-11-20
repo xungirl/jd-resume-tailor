@@ -107,18 +107,9 @@ Most "AI resume" tools make you look better by writing things you didn't do. Rec
 
 ## How a run goes
 
-```mermaid
-flowchart LR
-    A["🔗 Job link"] --> B["fetch_jd.py<br/>JD text + OPEN / closed"]
-    B --> C{"Hard constraints<br/>pass?"}
-    C -- no --> X["Stop and explain<br/>(grad window, degree,<br/>sponsorship, limits)"]
-    C -- yes --> D["Pick the lead project:<br/>what does this team build?"]
-    D --> E["New variant in your bank<br/>(choose + order, never write)"]
-    E --> F["Build PDF<br/>OVERFLOW = fail"]
-    F --> G["Render and look at it"]
-    G --> H["First_Last_Resume.pdf<br/>(no company name)"]
-    H --> I["Check the application form<br/>against checklist.md"]
-```
+<p align="center">
+  <img src="docs/flow.svg" alt="1 Job link, 2 Fetch the JD, 3 Hard constraints (fail: stop and explain why), 4 Pick the lead project, 5 New variant, 6 Build one page, 7 Look at it, 8 Upload and check the form" width="900">
+</p>
 
 ## What it does for you
 

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="340" viewBox="0 0 960 340" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>How a jd-resume-tailor run goes</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#718096"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e53e3e"/>
+    </marker>
+    <linearGradient id="n" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c6ef5"/>
+      <stop offset="1" stop-color="#845ef7"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="340" rx="16" fill="#ffffff" stroke="#e2e8f0"/>
+
+  <!-- Row 1, left to right -->
+  <g>
+    <rect x="24" y="40" width="196" height="76" rx="12" fill="#f7f9fc" stroke="#cbd5e0"/>
+    <circle cx="48" cy="64" r="13" fill="url(#n)"/><text x="48" y="69" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">1</text>
+    <text x="70" y="69" font-size="15" font-weight="700" fill="#1a202c">Job link</text>
+    <text x="40" y="98" font-size="11.5" fill="#4a5568">from any of 6 ATSs</text>
+  </g>
+  <g>
+    <rect x="260" y="40" width="196" height="76" rx="12" fill="#f7f9fc" stroke="#cbd5e0"/>
+    <circle cx="284" cy="64" r="13" fill="url(#n)"/><text x="284" y="69" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">2</text>
+    <text x="306" y="69" font-size="15" font-weight="700" fill="#1a202c">Fetch the JD</text>
+    <text x="276" y="98" font-size="11.5" fill="#4a5568">fetch_jd.py · OPEN or closed</text>
+  </g>
+  <g>
+    <rect x="496" y="40" width="196" height="76" rx="12" fill="#f7f9fc" stroke="#cbd5e0"/>
+    <circle cx="520" cy="64" r="13" fill="url(#n)"/><text x="520" y="69" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">3</text>
+    <text x="542" y="69" font-size="15" font-weight="700" fill="#1a202c">Hard constraints</text>
+    <text x="512" y="98" font-size="11.5" fill="#4a5568">grad window · degree · visa</text>
+  </g>
+  <g>
+    <rect x="732" y="40" width="204" height="76" rx="12" fill="#f7f9fc" stroke="#cbd5e0"/>
+    <circle cx="756" cy="64" r="13" fill="url(#n)"/><text x="756" y="69" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">4</text>
+    <text x="778" y="69" font-size="15" font-weight="700" fill="#1a202c">Pick the lead project</text>
+    <text x="748" y="98" font-size="11.5" fill="#4a5568">what does this team build?</text>
+  </g>
+  <line x1="220" y1="78" x2="256" y2="78" stroke="#718096" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="456" y1="78" x2="492" y2="78" stroke="#718096" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="692" y1="78" x2="728" y2="78" stroke="#718096" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="710" y="70" text-anchor="middle" font-size="10.5" font-weight="600" fill="#2f855a">pass</text>
+
+  <!-- Branch: constraint fails -->
+  <line x1="594" y1="116" x2="594" y2="150" stroke="#e53e3e" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrow-red)"/>
+  <text x="602" y="138" font-size="10.5" font-weight="600" fill="#c53030">fail</text>
+  <rect x="496" y="154" width="196" height="38" rx="19" fill="#fff5f5" stroke="#fc8181"/>
+  <text x="594" y="178" text-anchor="middle" font-size="12.5" font-weight="600" fill="#c53030">Stop and explain why</text>
+
+  <!-- Down into row 2 -->
+  <line x1="834" y1="116" x2="834" y2="222" stroke="#718096" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Row 2, right to left -->
+  <g>
+    <rect x="732" y="226" width="204" height="76" rx="12" fill="#f7f9fc" stroke="#cbd5e0"/>
+    <circle cx="756" cy="250" r="13" fill="url(#n)"/><text x="756" y="255" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">5</text>
+    <text x="778" y="255" font-size="15" font-weight="700" fill="#1a202c">New variant</text>
+    <text x="748" y="284" font-size="11.5" fill="#4a5568">choose + order, never write</text>
+  </g>
+  <g>
+    <rect x="496" y="226" width="196" height="76" rx="12" fill="#f7f9fc" stroke="#cbd5e0"/>
+    <circle cx="520" cy="250" r="13" fill="url(#n)"/><text x="520" y="255" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">6</text>
+    <text x="542" y="255" font-size="15" font-weight="700" fill="#1a202c">Build one page</text>
+    <text x="512" y="284" font-size="11.5" fill="#4a5568">OVERFLOW means fail</text>
+  </g>
+  <g>
+    <rect x="260" y="226" width="196" height="76" rx="12" fill="#f7f9fc" stroke="#cbd5e0"/>
+    <circle cx="284" cy="250" r="13" fill="url(#n)"/><text x="284" y="255" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">7</text>
+    <text x="306" y="255" font-size="15" font-weight="700" fill="#1a202c">Look at it</text>
+    <text x="276" y="284" font-size="11.5" fill="#4a5568">render the PDF, check by eye</text>
+  </g>
+  <g>
+    <rect x="24" y="226" width="196" height="76" rx="12" fill="#f0fff4" stroke="#68d391"/>
+    <circle cx="48" cy="250" r="13" fill="#38a169"/><text x="48" y="255" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">8</text>
+    <text x="70" y="255" font-size="15" font-weight="700" fill="#1a202c">Upload + form</text>
+    <text x="40" y="284" font-size="11.5" fill="#4a5568">neutral filename · checklist</text>
+  </g>
+  <line x1="732" y1="264" x2="696" y2="264" stroke="#718096" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="496" y1="264" x2="460" y2="264" stroke="#718096" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="260" y1="264" x2="224" y2="264" stroke="#718096" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <text x="480" y="326" text-anchor="middle" font-size="11" fill="#718096">Tailoring = choosing and ordering true bullets. Gaps are reported, never filled in.</text>
+</svg>
