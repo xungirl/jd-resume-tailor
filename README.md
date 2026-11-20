@@ -113,27 +113,54 @@ Most "AI resume" tools make you look better by writing things you didn't do. Rec
 
 ## What it does for you
 
-| | |
-|---|---|
-| 🔎 **Reads the JD from the source** | Pulls the posting from Greenhouse, Ashby, Lever, Workday, Oracle Recruiting Cloud or SmartRecruiters through their public JSON endpoints. Follows referral and short links, and tells you the posting is closed before you spend 20 minutes on it. |
-| ⚖️ **Catches the fine print** | Graduation windows, "two semesters remaining after the internship", fixed program dates, onsite-only, "at most 2 applications per cycle". Conflicts are flagged before you apply. |
-| 🎯 **Leads with what the team builds** | One sentence on the team's actual work decides which project goes first. A storage team sees your write-ahead log; a product team sees your API design. |
-| 📄 **Stays one page, and looks at it** | The builder fails on overflow and warns when a skills line wraps. The agent renders the PDF and checks it visually. |
-| 🏷️ **Neutral filenames** | The upload copy is `First_Last_Resume.pdf`, so "Acme_Storage" never reaches a different company's recruiter. |
-| 📝 **Checks the form** | Workday-style autofill pastes project bullets into a past job, picks the wrong field of study, leaves start dates blank. Paste the review page and it walks `checklist.md` before you hit Submit. |
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🔎 Reads the JD from the source</h3>
+      Pulls the posting from Greenhouse, Ashby, Lever, Workday, Oracle Recruiting Cloud or SmartRecruiters through their public JSON endpoints. Follows referral and short links, and tells you the posting is closed before you spend 20 minutes on it.
+    </td>
+    <td width="50%" valign="top">
+      <h3>⚖️ Catches the fine print</h3>
+      Graduation windows, "two semesters remaining after the internship", fixed program dates, onsite-only, "at most 2 applications per cycle". Conflicts are flagged before you apply.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🎯 Leads with what the team builds</h3>
+      One sentence on the team's actual work decides which project goes first. A storage team sees your write-ahead log; a product team sees your API design.
+    </td>
+    <td width="50%" valign="top">
+      <h3>📄 Stays one page, and looks at it</h3>
+      The builder fails on overflow and warns when a skills line wraps. The agent renders the PDF and checks it by eye.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🏷️ Neutral filenames</h3>
+      The upload copy is <code>First_Last_Resume.pdf</code>, so "Acme_Storage" never reaches a different company's recruiter.
+    </td>
+    <td width="50%" valign="top">
+      <h3>📝 Checks the form</h3>
+      Workday-style autofill pastes project bullets into a past job, picks the wrong field of study, leaves start dates blank. Paste the review page and it walks <code>checklist.md</code> before you hit Submit.
+    </td>
+  </tr>
+</table>
 
 ## What's inside
 
-| Path | What it does |
-|---|---|
-| `skills/jd-resume-tailor/SKILL.md` | The workflow the agent follows, from JD to form review |
-| `skills/jd-resume-tailor/fetch_jd.py` | JD fetcher for 6 ATSs through their public JSON endpoints. Standard library only. |
-| `skills/jd-resume-tailor/checklist.md` | Application form checklist: autofill damage, truthful answers, duplicates, limits |
-| `builder/build_resume.py` | One-page ReportLab builder driven by a TOML bullet bank. Fails on overflow, warns on wrapped skill lines, embeds fonts. |
-| `builder/example/resume.toml` | A complete example bank with 3 variants (fictional person) |
-| `scripts/smoke_test.py` | Live check of all 6 ATSs, a closed posting, and the builder |
-| `config.example.md` | Template for your personal config |
-| `.claude-plugin/` | Plugin and marketplace manifests |
+```
+jd-resume-tailor/
+├── skills/jd-resume-tailor/
+│   ├── SKILL.md            the workflow the agent follows, from JD to form review
+│   ├── fetch_jd.py         JD fetcher for 6 ATSs (public JSON endpoints, stdlib only)
+│   └── checklist.md        application form checklist: autofill damage, truthful answers
+├── builder/
+│   ├── build_resume.py     one-page builder: fails on overflow, embeds fonts
+│   └── example/resume.toml example bullet bank with 3 variants (fictional person)
+├── scripts/smoke_test.py   live check of all 6 ATSs, a closed posting, and the builder
+├── config.example.md       template for your personal config
+└── .claude-plugin/         plugin and marketplace manifests
+```
 
 ## Tested
 
