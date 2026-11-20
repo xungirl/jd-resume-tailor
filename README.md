@@ -42,6 +42,7 @@ An agent skill that tailors your resume to each job description by **choosing an
 - [How a run goes](#how-a-run-goes)
 - [What it does for you](#what-it-does-for-you)
 - [What's inside](#whats-inside)
+- [What it runs, reads and sends](#what-it-runs-reads-and-sends)
 - [Tested](#tested)
 - [Why it works this way](#why-it-works-this-way)
 
@@ -162,6 +163,19 @@ jd-resume-tailor/
 ├── config.example.md       template for your personal config
 └── .claude-plugin/         plugin and marketplace manifests
 ```
+
+## What it runs, reads and sends
+
+Everything happens on your machine. There are no hooks, no MCP servers, no telemetry, and it never changes your agent's permission settings.
+
+| | |
+|---|---|
+| **Runs** | `python3 fetch_jd.py` (standard library only); the builder via `uv run --with reportlab` (or your own build script, if your config names one); optionally `pdftoppm` / `pdffonts` / `sips` to look at the PDF |
+| **Network** | `fetch_jd.py` requests only the posting URL you give it (following its redirects, e.g. referral or short links) and that ATS's public posting API: `boards-api.greenhouse.io`, `api.lever.co`, `api.ashbyhq.com`, `api.smartrecruiters.com`, the company's `*.myworkdayjobs.com` tenant, or its `*.oraclecloud.com` host. `uv` downloads `reportlab` from PyPI the first time. Nothing else is fetched, and nothing about you is sent anywhere. |
+| **Reads** | Your bullet bank, `~/.config/jd-resume-tailor/config.md`, the resume PDF or DOCX you point it to, and the repo or benchmark files you name when it verifies a fact |
+| **Writes** | One new variant block in your bank (after a backup), PDFs in your output folder, the config file on first run, and a tracker row only if your config names a tracker |
+
+Your resume content goes to whatever model your agent uses, as with anything else you ask that agent to do.
 
 ## Tested
 
