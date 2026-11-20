@@ -14,6 +14,16 @@ Look for the user's config at `~/.config/jd-resume-tailor/config.md`. It says wh
 - the output folder;
 then write the config so the next run skips the questions.
 
+**Where the builder is.** When installed as a plugin or cloned, it sits two levels up from this skill: `<skill_dir>/../../builder/build_resume.py`, with the example bank next to it. Build with `cd <builder dir> && OUTDIR=<output folder> uv run --with reportlab python build_resume.py <bank.toml> --variant <name>` (without `uv`: `pip install reportlab`, then `python3 build_resume.py ...`). If `builder/` is missing (installed with `npx skills add`, which copies only this folder), ask the user to `git clone https://github.com/xungirl/jd-resume-tailor` and use the builder from there, or point the config at their own build script.
+
+**Keep the user's bank outside the plugin folder** (e.g. `~/resume/resume.toml`). Plugin updates replace the plugin folder, so a bank or variant saved inside it would be lost. If the user names the example bank as theirs, copy it out first and work on the copy.
+
+**No bullet bank yet?** Most people arrive with a PDF or Word resume. Offer to start one from it:
+1. Read the existing resume (PDF, DOCX or pasted text).
+2. Copy `builder/example/resume.toml` to the user's chosen path and replace its content with theirs, **word for word**: same numbers, dates, titles, degrees. Give each bullet a short key. Don't polish, merge or "improve" bullets in this step, and don't fill in missing numbers. Where a bullet has no number, leave it as is and list it for the user as "worth measuring".
+3. Add one variant that reproduces their current resume, build it, and have the user confirm the bank matches what they already had before tailoring anything.
+4. Then ask whether they have true bullets that didn't fit on the old page (more projects, more results). Those are what make tailoring worth it.
+
 ## 1. Get the JD
 
 - Run `python3 <skill_dir>/fetch_jd.py "<url>"`. It follows referral/short links, detects the ATS, and prints title, location, **OPEN / NOT FOUND**, and the JD text. Exit code 2 = posting gone: tell the user before doing any work.
@@ -46,7 +56,7 @@ Report constraint conflicts plainly (e.g. "JD says 2 semesters left after the in
 
 - Add a new variant (named after the company/role family) instead of editing an existing one. If the build script is shared with other sessions, make **targeted** edits (insert one block), never rewrite the whole file. Back it up first.
 - Build. Treat `OVERFLOW` as a failure: cut the weakest bullet. If there is room for 2+ lines, add the next most relevant true bullet rather than leaving white space.
-- Render to PNG (`pdftoppm -r 110 -png -singlefile file.pdf out`) and **look at it**: one page, no orphan words on skill lines, headings not wrapped, links present.
+- Render to PNG (`pdftoppm -r 110 -png -singlefile file.pdf out`) and **look at it**: one page, no orphan words on skill lines, headings not wrapped, links present. If bold text looks regular in the render, check `pdffonts file.pdf` before calling it a layout bug: fonts that aren't embedded get substituted, and poppler draws them without bold. The builder embeds fonts by default and prints `font: ... (NOT embedded)` when it couldn't. Without `pdftoppm`, use `sips -s format png file.pdf --out out.png` on macOS.
 - If the JD asks for availability dates, turn on the availability line.
 
 ## 5. Hand off
