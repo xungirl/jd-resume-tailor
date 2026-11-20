@@ -9,7 +9,7 @@
       "name": "jd-resume-tailor",
       "source": "./",
       "description": "Tailor a one-page resume to a job description without making anything up.",
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ],
   "description": "Resume tailoring for job seekers: match your real experience to each job description, one honest page at a time."
