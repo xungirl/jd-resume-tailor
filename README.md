@@ -1,4 +1,6 @@
-<h1 align="center">jd-resume-tailor</h1>
+<h1 align="center">
+  <img src="docs/wordmark.svg" alt="jd-resume-tailor" width="760">
+</h1>
 
 <p align="center">
   <b>Paste a job link. Get the best <i>honest</i> one-page resume you already have the facts for.</b>
@@ -203,7 +205,7 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 
 ## License
 
-MIT. Claude Code, OpenAI Codex and DeepSeek logos are trademarks of their owners and are shown only to indicate compatibility. Logo files come from [LobeHub Icons](https://github.com/lobehub/lobe-icons) (MIT).
+MIT. Claude Code, OpenAI Codex and DeepSeek logos are trademarks of their owners and are shown only to indicate compatibility. Logo files come from [LobeHub Icons](https://github.com/lobehub/lobe-icons) (MIT). The title is set in [Unbounded](https://github.com/googlefonts/unbounded) (SIL OFL 1.1), outlined by `docs/make_wordmark.py`.
 
 ---
 
