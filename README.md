@@ -9,7 +9,8 @@ A [Claude Code](https://claude.com/claude-code) plugin that tailors your resume 
 <sub>Same bullet bank, two job postings. The backend posting gets the API project first; the AI posting gets the retrieval-evaluation project first and an AI skills line on top. Fictional candidate, see `builder/example/resume.toml`.</sub>
 
 ```
-/plugin install jd-resume-tailor --marketplace xungirl/jd-resume-tailor
+/plugin marketplace add xungirl/jd-resume-tailor
+/plugin install jd-resume-tailor@jd-resume-tailor
 ```
 
 Then, in Claude Code: *"tailor my resume for https://job-boards.greenhouse.io/acme/jobs/123"*
@@ -56,7 +57,8 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 
 **As a plugin (recommended):**
 ```
-/plugin install jd-resume-tailor --marketplace xungirl/jd-resume-tailor
+/plugin marketplace add xungirl/jd-resume-tailor
+/plugin install jd-resume-tailor@jd-resume-tailor
 ```
 
 **Or clone it** (to hack on it, or to use the builder and fetcher on their own):
@@ -110,4 +112,4 @@ MIT
 
 **流程：** 抓 JD（6 种招聘系统的公开接口，顺便判断岗位还开不开）→ 先看硬性条件（毕业时间、剩几个学期、实习日期、限投数量）→ 用一句话概括「这个组做什么」，最能证明这一点的项目放第一 → 生成新版本，超过一页算失败，有空位就补下一条真实的 bullet → 转成图片检查 → 复制一份文件名不带公司名的 → 检查申请表 → 记录投递。
 
-**用法：** 在 Claude Code 里运行 `/plugin install jd-resume-tailor --marketplace xungirl/jd-resume-tailor`（或者克隆后 `./install.sh`），把 `builder/example/resume.toml` 换成你自己的内容，在 Claude Code 里贴岗位链接，说「按这个 JD 改简历」。
+**用法：** 在 Claude Code 里运行 `/plugin marketplace add xungirl/jd-resume-tailor`，再运行 `/plugin install jd-resume-tailor@jd-resume-tailor`（或者克隆后 `./install.sh`），把 `builder/example/resume.toml` 换成你自己的内容，在 Claude Code 里贴岗位链接，说「按这个 JD 改简历」。
