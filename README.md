@@ -48,8 +48,9 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 | `skills/jd-resume-tailor/SKILL.md` | The workflow Claude follows: fetch JD → hard constraints → map to bullet bank → build → visual check → neutral filename → form review → record |
 | `skills/jd-resume-tailor/fetch_jd.py` | Gets the JD as text from a posting URL through each ATS's public JSON endpoint: Greenhouse, Ashby, Lever, Workday, Oracle Recruiting Cloud, SmartRecruiters. Follows referral/short links, reports if the posting is closed. Standard library only. |
 | `skills/jd-resume-tailor/checklist.md` | Application form checklist: autofill damage, truthful answers, duplicates, application limits |
-| `builder/build_resume.py` | One-page resume builder (ReportLab) driven by a TOML bullet bank. Fails on overflow, warns when a skills line wraps. |
+| `builder/build_resume.py` | One-page resume builder (ReportLab) driven by a TOML bullet bank. Fails on overflow, warns when a skills line wraps, embeds fonts so ATS parsers and viewers don't substitute them. |
 | `builder/example/resume.toml` | A complete example bank with 3 variants (fictional person) |
+| `scripts/smoke_test.py` | Live check: finds an open posting on each of the 6 ATSs, fetches it, checks a closed one exits 2, builds the example bank |
 | `config.example.md` | Template for your personal config (paths stay on your machine) |
 | `.claude-plugin/` | Plugin + marketplace manifests for `/plugin install` |
 
@@ -60,6 +61,8 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 /plugin marketplace add xungirl/jd-resume-tailor
 /plugin install jd-resume-tailor@jd-resume-tailor
 ```
+
+**Skill only, any agent** (via [skills.sh](https://skills.sh)): `npx skills add xungirl/jd-resume-tailor`. This copies just the skill folder, so clone the repo too if you want the builder.
 
 **Or clone it** (to hack on it, or to use the builder and fetcher on their own):
 ```bash
@@ -76,9 +79,11 @@ uv run --with reportlab python build_resume.py example/resume.toml
 python3 ../skills/jd-resume-tailor/fetch_jd.py "https://job-boards.greenhouse.io/<company>/jobs/<id>"
 ```
 
-Then copy `builder/example/resume.toml` somewhere private, replace it with your own facts, and copy `config.example.md` to `~/.config/jd-resume-tailor/config.md` with your paths. In Claude Code, paste a job link and say *"tailor my resume for this"*.
+Then copy `builder/example/resume.toml` somewhere private (not inside the plugin folder: plugin updates replace it), replace it with your own facts, and copy `config.example.md` to `~/.config/jd-resume-tailor/config.md` with your paths. In Claude Code, paste a job link and say *"tailor my resume for this"*.
 
-Requirements: Python 3.11+, `reportlab` (the example uses [uv](https://docs.astral.sh/uv/) to pull it in), optionally `pdftoppm` (poppler) so Claude can look at the rendered page. For nicer typography put the Carlito fonts (SIL OFL, metric-compatible with Calibri) in a folder and set `FONT_DIR`.
+**Only have a PDF or Word resume?** Say so on the first run. The skill copies it into a bullet bank word for word (no polishing, no invented numbers), rebuilds your current resume from the bank so you can check nothing changed, and tailors from there.
+
+Requirements: Python 3.11+, `reportlab` (the example uses [uv](https://docs.astral.sh/uv/) to pull it in), optionally `pdftoppm` (poppler) so Claude can look at the rendered page. Fonts are embedded: Arial on macOS/Windows, Liberation Sans on Linux. For nicer typography put the Carlito fonts (SIL OFL, metric-compatible with Calibri) in a folder and set `FONT_DIR`.
 
 Already have your own resume script? Keep it. Point the config at it; the skill only needs to know how to add a variant and run a build.
 
@@ -93,7 +98,9 @@ Already have your own resume script? Keep it. Point the config at it; the skill 
 
 ## Tested
 
-`fetch_jd.py` was checked against live internship postings on all six supported ATSs (including a Greenhouse `token=` embed link that doesn't name the company, and a closed posting returning exit code 2).
+`fetch_jd.py` was checked against live internship postings on all six supported ATSs (including a Greenhouse `token=` embed link that doesn't name the company, and a closed posting returning exit code 2). Re-run it any time: `python3 scripts/smoke_test.py`.
+
+End to end (2026-11-20), as a new user would get it: installed from GitHub with `/plugin marketplace add` + `/plugin install` into an empty Claude Code config, then driven with `claude -p --plugin-dir` and no user settings or other skills loaded. From one sentence ("Tailor my resume for <link>") Claude invoked the skill on its own, fetched the JD and read the example bank. On a Staff posting (10+ years) and on an internship limited to third-year undergrads, it stopped before building and explained the failed hard constraint. When told to build anyway, it added exactly one variant to the bank, built a one-page PDF led by the matching Go project, listed the JD's unmatched keywords (GraphQL, React) as gaps instead of adding them, and copied the PDF to a filename without the company. The run also turned up two fixes, now in: fonts weren't embedded (poppler drew bold as regular, so the visual check misreported), and the skill didn't say where the builder lives after a plugin install. `npx skills add` was checked to find and install the skill. Three runs cost about $0.83 in total.
 
 ## License
 
@@ -112,4 +119,6 @@ MIT
 
 **流程：** 抓 JD（6 种招聘系统的公开接口，顺便判断岗位还开不开）→ 先看硬性条件（毕业时间、剩几个学期、实习日期、限投数量）→ 用一句话概括「这个组做什么」，最能证明这一点的项目放第一 → 生成新版本，超过一页算失败，有空位就补下一条真实的 bullet → 转成图片检查 → 复制一份文件名不带公司名的 → 检查申请表 → 记录投递。
 
-**用法：** 在 Claude Code 里运行 `/plugin marketplace add xungirl/jd-resume-tailor`，再运行 `/plugin install jd-resume-tailor@jd-resume-tailor`（或者克隆后 `./install.sh`），把 `builder/example/resume.toml` 换成你自己的内容，在 Claude Code 里贴岗位链接，说「按这个 JD 改简历」。
+**用法：** 在 Claude Code 里运行 `/plugin marketplace add xungirl/jd-resume-tailor`，再运行 `/plugin install jd-resume-tailor@jd-resume-tailor`（只要 skill 也可以用 `npx skills add xungirl/jd-resume-tailor`，但这样不带 builder；或者克隆后 `./install.sh`），把 `builder/example/resume.toml` 复制到插件目录以外的地方（插件更新会覆盖插件目录），换成你自己的内容，在 Claude Code 里贴岗位链接，说「按这个 JD 改简历」。只有 PDF 或 Word 简历的话，第一次用时说一声，skill 会把它逐字搬进素材库（不润色、不补数字），先还原出你现在这份简历让你核对，再开始微调。
+
+**测试：** `python3 scripts/smoke_test.py` 会在 6 种招聘系统上各找一个在招岗位来抓，再检查已关闭的岗位返回 2，最后用示例素材库生成 PDF。2026-11-20 按新用户的方式从 GitHub 装插件做了端到端测试：遇到不符合硬性条件的岗位，它会先停下来说明原因；坚持要生成时，只新增一个版本，PDF 是一页，JD 要求但素材库里没有的关键词列为短板，不会写进简历。这次测试还发现并修了两个问题：字体没嵌入，以及插件安装后 skill 找不到 builder。
