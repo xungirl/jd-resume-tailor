@@ -44,7 +44,6 @@ An agent skill that tailors your resume to each job description by **choosing an
 - [What's inside](#whats-inside)
 - [Tested](#tested)
 - [Why it works this way](#why-it-works-this-way)
-- [中文说明](#中文说明)
 
 ## Quick start
 
@@ -206,30 +205,3 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 ## License
 
 MIT. Claude Code, OpenAI Codex and DeepSeek logos are trademarks of their owners and are shown only to indicate compatibility. Logo files come from [LobeHub Icons](https://github.com/lobehub/lobe-icons) (MIT). The title is set in [Unbounded](https://github.com/googlefonts/unbounded) (SIL OFL 1.1), outlined by `docs/make_wordmark.py`.
-
----
-
-## 中文说明
-
-<details>
-<summary><b>点击展开</b></summary>
-
-<br>
-
-一个 agent skill，再加两个小脚本，用来**按岗位 JD 微调一页简历，而且不编造任何东西**。支持 **Claude Code、OpenAI Codex、DeepSeek Harness**，三个都在 2026-11-20 做过端到端实测。
-
-**安装**
-
-- **Claude Code（推荐）：** 先运行 `/plugin marketplace add xungirl/jd-resume-tailor`，再运行 `/plugin install jd-resume-tailor@jd-resume-tailor`。
-- **OpenAI Codex / DeepSeek Harness：** 运行 `npx skills add xungirl/jd-resume-tailor --agent codex`，skill 会装进两者都会读的 `.agents/skills/`；再 `git clone` 本仓库，拿到生成简历用的 builder。DeepSeek Harness 的 key 放在 `DEEPSEEK_API_KEY` 或 `$DSH_HOME/.env` 里。
-- 装好后贴一个岗位链接，说「按这个 JD 改简历」就行。
-
-**只有 PDF 或 Word 简历？** 第一次用时说一声。skill 会把它逐字搬进素材库（不润色、不补数字），先还原出你现在这份简历让你核对，再开始微调。素材库要放在插件目录以外，因为插件更新会覆盖插件目录。
-
-**规则：** 只用素材库里已有的 bullet；JD 要求而你没有的技能，列为「面试要准备的短板」，不会写进简历；不改数字、日期、职位、学位；申请表上 sponsorship 和工作许可的问题如实回答。
-
-**流程：** 抓 JD（6 种招聘系统的公开接口，顺便判断岗位还开不开）→ 先看硬性条件（毕业时间、剩几个学期、实习日期、限投数量），不符合就停下来说明 → 用一句话概括「这个组做什么」，最能证明这一点的项目放第一 → 生成新版本，超过一页算失败 → 转成图片检查 → 复制一份文件名不带公司名的 → 检查申请表。
-
-**测试：** `python3 scripts/smoke_test.py` 会在 6 种招聘系统上各抓一个在招岗位，检查已关闭的岗位返回 2，再用示例素材库生成 PDF。三个 agent 的端到端测试结果见上面的 [Tested](#tested) 表格。
-
-</details>
