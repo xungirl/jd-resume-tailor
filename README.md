@@ -64,6 +64,8 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 
 **Skill only, any agent** (via [skills.sh](https://skills.sh)): `npx skills add xungirl/jd-resume-tailor`. This copies just the skill folder, so clone the repo too if you want the builder.
 
+**OpenAI Codex:** `npx skills add xungirl/jd-resume-tailor --agent codex` puts the skill in `.agents/skills/`, which Codex scans. Then clone the repo for the builder and ask Codex to tailor your resume for a link; it picks the skill up on its own.
+
 **Or clone it** (to hack on it, or to use the builder and fetcher on their own):
 ```bash
 git clone https://github.com/xungirl/jd-resume-tailor.git
@@ -102,6 +104,8 @@ Already have your own resume script? Keep it. Point the config at it; the skill 
 
 End to end (2026-11-20), as a new user would get it: installed from GitHub with `/plugin marketplace add` + `/plugin install` into an empty Claude Code config, then driven with `claude -p --plugin-dir` and no user settings or other skills loaded. From one sentence ("Tailor my resume for <link>") Claude invoked the skill on its own, fetched the JD and read the example bank. On a Staff posting (10+ years) and on an internship limited to third-year undergrads, it stopped before building and explained the failed hard constraint. When told to build anyway, it added exactly one variant to the bank, built a one-page PDF led by the matching Go project, listed the JD's unmatched keywords (GraphQL, React) as gaps instead of adding them, and copied the PDF to a filename without the company. The run also turned up two fixes, now in: fonts weren't embedded (poppler drew bold as regular, so the visual check misreported), and the skill didn't say where the builder lives after a plugin install. `npx skills add` was checked to find and install the skill. Three runs cost about $0.83 in total.
 
+**Codex** (2026-11-20, Codex CLI 0.167.0): installed with `npx skills add xungirl/jd-resume-tailor --agent codex` into a fresh project, then ran `codex exec` with a resume PDF and an internship link, without naming the skill. Codex found `.agents/skills/jd-resume-tailor/SKILL.md` and followed it: fetched the JD, copied the PDF into a bullet bank, rebuilt the original resume (its text matches the source PDF exactly), and built a tailored one-page PDF with embedded fonts. It left the cloned repo untouched.
+
 ## License
 
 MIT
@@ -119,6 +123,6 @@ MIT
 
 **流程：** 抓 JD（6 种招聘系统的公开接口，顺便判断岗位还开不开）→ 先看硬性条件（毕业时间、剩几个学期、实习日期、限投数量）→ 用一句话概括「这个组做什么」，最能证明这一点的项目放第一 → 生成新版本，超过一页算失败，有空位就补下一条真实的 bullet → 转成图片检查 → 复制一份文件名不带公司名的 → 检查申请表 → 记录投递。
 
-**用法：** 在 Claude Code 里运行 `/plugin marketplace add xungirl/jd-resume-tailor`，再运行 `/plugin install jd-resume-tailor@jd-resume-tailor`（只要 skill 也可以用 `npx skills add xungirl/jd-resume-tailor`，但这样不带 builder；或者克隆后 `./install.sh`），把 `builder/example/resume.toml` 复制到插件目录以外的地方（插件更新会覆盖插件目录），换成你自己的内容，在 Claude Code 里贴岗位链接，说「按这个 JD 改简历」。只有 PDF 或 Word 简历的话，第一次用时说一声，skill 会把它逐字搬进素材库（不润色、不补数字），先还原出你现在这份简历让你核对，再开始微调。
+**用法：** 在 Claude Code 里运行 `/plugin marketplace add xungirl/jd-resume-tailor`，再运行 `/plugin install jd-resume-tailor@jd-resume-tailor`（只要 skill 也可以用 `npx skills add xungirl/jd-resume-tailor`，但这样不带 builder；用 **OpenAI Codex** 的话加上 `--agent codex`，skill 会装进 Codex 读取的 `.agents/skills/`，已实测；或者克隆后 `./install.sh`），把 `builder/example/resume.toml` 复制到插件目录以外的地方（插件更新会覆盖插件目录），换成你自己的内容，在 Claude Code 里贴岗位链接，说「按这个 JD 改简历」。只有 PDF 或 Word 简历的话，第一次用时说一声，skill 会把它逐字搬进素材库（不润色、不补数字），先还原出你现在这份简历让你核对，再开始微调。
 
 **测试：** `python3 scripts/smoke_test.py` 会在 6 种招聘系统上各找一个在招岗位来抓，再检查已关闭的岗位返回 2，最后用示例素材库生成 PDF。2026-11-20 按新用户的方式从 GitHub 装插件做了端到端测试：遇到不符合硬性条件的岗位，它会先停下来说明原因；坚持要生成时，只新增一个版本，PDF 是一页，JD 要求但素材库里没有的关键词列为短板，不会写进简历。这次测试还发现并修了两个问题：字体没嵌入，以及插件安装后 skill 找不到 builder。
