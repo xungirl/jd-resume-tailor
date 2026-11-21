@@ -40,6 +40,7 @@ class Page(BaseHTTPRequestHandler):
 def chrome():
     hits = sorted(glob.glob(os.path.expanduser(
         '~/Library/Caches/ms-playwright/chromium-*/chrome-mac*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing')))
+    # none cached: use Playwright's own full Chromium (channel='chromium'; the headless shell can't load extensions)
     return hits[-1] if hits else None
 
 
@@ -87,7 +88,7 @@ def main():
 
     with sync_playwright() as p:
         ctx = p.chromium.launch_persistent_context(
-            str(profile), executable_path=chrome(), headless=not args.headed,
+            str(profile), executable_path=chrome(), channel=None if chrome() else 'chromium', headless=not args.headed,
             args=[f'--disable-extensions-except={ext}', f'--load-extension={ext}'])
         try:
             sw = ctx.service_workers[0] if ctx.service_workers else ctx.wait_for_event('serviceworker')

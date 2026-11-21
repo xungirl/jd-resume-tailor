@@ -37,6 +37,7 @@ class Page(BaseHTTPRequestHandler):
 def chrome():
     hits = sorted(glob.glob(os.path.expanduser(
         '~/Library/Caches/ms-playwright/chromium-*/chrome-mac*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing')))
+    # none cached: use Playwright's own full Chromium (channel='chromium'; the headless shell can't load extensions)
     return hits[-1] if hits else None
 
 
@@ -143,9 +144,17 @@ def main():
         page.locator('#reviews button', has_text='HM 1').click()
         page.wait_for_selector('#reviewText:not([hidden])')
         check(f'{tag}: opens a review', 'VERDICT: unsure' in page.locator('#reviewText').text_content())
+        # Check the request the button makes. Headless WebKit downloads a PDF instead of showing it,
+        # so the new tab's URL isn't reliable there; real Safari shows it inline.
+        seen = []
+        ctx.on('request', lambda r: seen.append(r.url) if '/pdf?id=' in r.url else None)
         with ctx.expect_page() as pdf_page:
             page.click('#openPdf')
-        pdf_url = pdf_page.value.url
+        for _ in range(50):
+            if seen:
+                break
+            page.wait_for_timeout(100)
+        pdf_url = seen[0] if seen else pdf_page.value.url
         check(f'{tag}: Open PDF opens the PDF from the server', pdf_url.startswith(base + '/pdf?id='), pdf_url)
         pdf_page.value.close()
         jid = re.search(r'id=([A-Za-z0-9_]+)', pdf_url).group(1)
@@ -188,7 +197,7 @@ def main():
 
     try:
         with sync_playwright() as p:
-            b = p.chromium.launch(executable_path=chrome(), headless=not args.headed)
+            b = p.chromium.launch(executable_path=chrome(), channel=None if chrome() else 'chromium', headless=not args.headed)
             try:
                 flow(b, 'chrome', True)
             finally:
