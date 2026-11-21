@@ -1,111 +1,110 @@
-// JD Tailor panel (Chrome/Edge side panel, Safari popup).
+// JD Tailor panel: capture the JD here, run the agents on your computer through native messaging.
 import { captureJob } from './lib/capture.js';
-import * as OR from './lib/openrouter.js';
-import { SCHEMA, SYSTEM, userMessage, parseAnswer, newNumbers, rewordedBullets } from './lib/tailor.js';
-import { render } from './lib/md.js';
 
+const HOST = 'io.github.xungirl.jd_tailor';
 const $ = (id) => document.getElementById(id);
-const DEFAULT_MODEL = 'anthropic/claude-opus-5.5';
-const KEEP_RESULTS = 15;
+const ACTIVE = new Set(['queued', 'running']);
+const STATUS = { queued: 'queued', running: 'running', ready: 'ready', needs_you: 'needs your call', needs_user: 'question for you',
+  skip: 'not a fit', failed: 'failed', cancelled: 'stopped' };
 
-let S = { orKey: '', model: DEFAULT_MODEL, resume: '' };
-let tab = null;        // the job tab we are looking at
-let job = null;        // what Capture found on it
-let current = null;    // the result shown
+let H = null;        // hello from the host: agents, settings
+let tab = null;      // the job tab
+let job = null;      // what Capture found
+let shown = null;    // the job shown in the job card
+let poll = null;
 let busy = false;
 
-// ---------- settings ----------
+// ---------- talking to the host ----------
 
-async function loadSettings() {
-  S = { ...S, ...(await chrome.storage.local.get(['orKey', 'model', 'resume'])) };
-  $('resume').value = S.resume || '';
-  countResume();
+function native(msg) {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendNativeMessage(HOST, msg, (res) => {
+        const err = chrome.runtime.lastError;
+        resolve(err ? { ok: false, error: err.message, noHost: /not found|forbidden|native/i.test(err.message) } : res || { ok: false, error: 'no answer' });
+      });
+    } catch (e) {
+      resolve({ ok: false, error: String(e), noHost: true });
+    }
+  });
 }
-const save = (patch) => { Object.assign(S, patch); return chrome.storage.local.set(patch); };
 
-function countResume() {
-  const n = ($('resume').value.trim().match(/\S+/g) || []).length;
-  $('resumeCount').textContent = n ? `${n} words` : '';
-}
-
-async function showKey() {
+async function hello() {
+  const r = await native({ cmd: 'hello' });
   const c = $('gear');
-  if (!S.orKey) { c.className = 'conn'; $('connText').textContent = 'not connected'; $('keyStatus').textContent = ''; return; }
-  const info = await OR.keyInfo(S.orKey);
-  if (info.ok) {
-    c.className = 'conn ok';
-    const left = info.limit_remaining != null ? ` · $${(+info.limit_remaining).toFixed(2)} left on this key` : '';
-    $('connText').textContent = 'OpenRouter';
-    $('keyStatus').textContent = `✓ Connected${left}`;
-  } else {
+  if (!r.ok) {
+    H = null;
     c.className = 'conn bad';
-    $('connText').textContent = info.status === 401 ? 'key not accepted' : 'offline?';
-    $('keyStatus').textContent = info.status === 401 ? 'OpenRouter did not accept this key. Connect again.' : 'Could not reach OpenRouter.';
+    $('connText').textContent = 'not connected';
+    $('install').hidden = false;
+    $('installErr').textContent = r.noHost ? '' : r.error;
+    return false;
   }
+  H = r;
+  $('install').hidden = true;
+  const w = r.agents.find((a) => a.id === r.writer);
+  c.className = 'conn ' + (w && w.ready ? 'ok' : 'bad');
+  $('connText').textContent = w ? w.name : 'no agent';
+  renderAgents();
+  return true;
 }
 
-async function loadModels() {
-  const sel = $('model');
-  let list = [];
-  try { list = await OR.models(); } catch (e) { $('modelNote').textContent = e.message; }
-  if (!list.some((m) => m.id === S.model)) list.unshift({ id: S.model, name: S.model, note: '', cost: null });
-  sel.innerHTML = '';
-  let freeHeader = false;
-  for (const m of list) {
-    if (m.free && !freeHeader) { const o = new Option('── free models ──', ''); o.disabled = true; sel.add(o); freeHeader = true; }
-    const price = m.free ? 'free' : m.cost != null ? `≈ $${m.cost.toFixed(2)} each` : '';
-    sel.add(new Option(`${m.name}${price ? ` (${price})` : ''}`, m.id));
+function renderAgents() {
+  const list = $('agentList');
+  list.innerHTML = '';
+  for (const a of H.agents) {
+    const li = document.createElement('li');
+    li.className = a.ready ? 'ok' : 'no';
+    const b = document.createElement('b'); b.textContent = a.name;
+    const n = document.createElement('span'); n.className = 'muted small'; n.textContent = a.note;
+    li.append(b, n);
+    list.appendChild(li);
   }
-  sel.value = S.model;
-  const note = () => { const m = list.find((x) => x.id === sel.value); $('modelNote').textContent = m?.note || ''; };
-  note();
-  sel.onchange = () => { save({ model: sel.value }); note(); };
+  const fill = (sel, value, same) => {
+    sel.innerHTML = '';
+    if (same) sel.add(new Option('Same as writer', 'same'));
+    for (const a of H.agents) {
+      const o = new Option(a.name + (a.ready ? '' : ' (not ready)'), a.id);
+      o.disabled = !a.ready;
+      sel.add(o);
+    }
+    sel.value = value;
+  };
+  fill($('writer'), H.writer, false);
+  fill($('reviewer'), H.reviewer, true);
+  $('dsBox').hidden = !H.agents.find((a) => a.id === 'deepseek' && a.found);
+  const warn = [];
+  if (!H.skill) warn.push('The jd-resume-tailor skill is not installed. Get it at github.com/xungirl/jd-resume-tailor.');
+  if (!H.tailor_config) warn.push('jd-resume-tailor has no config yet. Run it once in Claude Code ("tailor my resume") so it learns where your bullet bank is.');
+  if (!H.poppler) warn.push('poppler is missing, so the script checks can\'t read the PDF. Install it: brew install poppler');
+  $('envWarn').hidden = !warn.length;
+  $('envWarn').textContent = warn.join(' ');
+  const rv = $('reviewer').value === 'same' ? H.writer : $('reviewer').value;
+  const name = (id) => (H.agents.find((a) => a.id === id) || {}).name || id;
+  $('who').textContent = `Writer: ${name(H.writer)} · Reviewers: ${name(rv)}`;
 }
 
-function setupNeeded() { return !S.orKey || !S.resume.trim(); }
-function showSetup(on) { $('setup').hidden = !on; }
+async function saveSettings(patch) {
+  const r = await native({ cmd: 'settings', set: patch });
+  if (r.ok) { H.writer = r.writer; H.reviewer = r.reviewer; H.agents = r.agents; renderAgents(); await hello(); }
+  return r;
+}
 
-$('gear').onclick = () => showSetup($('setup').hidden);
-
-$('login').onclick = async () => {
-  const b = $('login');
-  b.disabled = true; b.textContent = 'Waiting for OpenRouter…';
-  try {
-    const key = await OR.login();
-    await save({ orKey: key });
-    await showKey();
-  } catch (e) {
-    $('keyStatus').textContent = '✗ ' + (e.message || e);
-  } finally {
-    b.disabled = false; b.textContent = 'Connect OpenRouter';
-  }
-};
-
-$('saveKey').onclick = async () => {
-  const k = $('keyInput').value.trim();
+$('writer').onchange = () => saveSettings({ writer: $('writer').value });
+$('reviewer').onchange = () => saveSettings({ reviewer: $('reviewer').value });
+$('saveDs').onclick = async () => {
+  const k = $('dsKey').value.trim();
   if (!k) return;
-  await save({ orKey: k });
-  $('keyInput').value = '';
-  await showKey();
+  await saveSettings({ deepseek_key: k });
+  $('dsKey').value = '';
 };
-
-$('resume').addEventListener('input', countResume);
-$('resume').addEventListener('change', () => save({ resume: $('resume').value }));
-$('resumeFile').onchange = async (e) => {
-  const f = e.target.files[0];
-  if (!f) return;
-  $('resume').value = await f.text();
-  countResume();
-  await save({ resume: $('resume').value });
-};
-
-$('doneSetup').onclick = async () => {
-  await save({ resume: $('resume').value });
-  if (!S.orKey) return note('Connect OpenRouter or paste a key first.', 'red');
-  if (!S.resume.trim()) return note('Paste your resume first.', 'red');
-  showSetup(false);
-  note('');
-  refreshButtons();
+$('gear').onclick = () => { if (H) $('agents').hidden = !$('agents').hidden; };
+$('closeAgents').onclick = () => ($('agents').hidden = true);
+$('retry').onclick = async () => { if (await hello()) loadPage(); };
+$('copyCmd').onclick = async () => {
+  await navigator.clipboard.writeText($('installCmd').textContent);
+  $('copyCmd').textContent = 'Copied';
+  setTimeout(() => ($('copyCmd').textContent = 'Copy'), 1500);
 };
 
 // ---------- the job page ----------
@@ -125,30 +124,25 @@ async function activeTab() {
 }
 const isWeb = (t) => t && /^https?:/.test(t.url || '');
 
-async function results() { return (await chrome.storage.local.get('results')).results || {}; }
-
 async function loadPage() {
-  if (busy) return;
   tab = await activeTab();
-  const r = isWeb(tab) ? (await results())[tab.url] : null;
-  if (r) {
-    job = r.job;
-    $('jd').value = job.text;
-    showJob();
-    showResult(r);
-  } else if (!job || !tab || job.tabUrl !== tab.url) {
+  if (!job || !tab || job.tabUrl !== tab.url) {
     job = null;
     $('jd').value = '';
+    $('jdLen').textContent = '';
     $('pageTitle').textContent = isWeb(tab) ? (tab.title || tab.url) : 'Open a job posting';
     $('pageMeta').textContent = isWeb(tab) ? 'Press Capture JD to read the job description.' : '';
-    $('jdLen').textContent = '';
-    $('result').hidden = true;
     note('');
   }
   refreshButtons();
+  if (H && isWeb(tab)) {
+    const r = await native({ cmd: 'find', url: tab.url });
+    if (r.ok && r.job) showJob(r.job);
+  }
+  loadRecent();
 }
 
-function showJob() {
+function showJobInfo() {
   $('pageTitle').textContent = [job.company, job.title].filter(Boolean).join(' · ') || job.url;
   const words = (job.text.match(/\S+/g) || []).length;
   $('pageMeta').textContent = [job.location, `${words} words`, job.how && `read from ${job.how}`].filter(Boolean).join(' · ');
@@ -157,11 +151,7 @@ function showJob() {
 
 function refreshButtons() {
   $('capture').disabled = busy || !isWeb(tab);
-  $('tailor').disabled = busy || $('jd').value.trim().length < 200;
-}
-
-async function runCapture() {
-  return (await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: captureJob }))[0].result;
+  $('tailor').disabled = busy || !H || $('jd').value.trim().length < 200;
 }
 
 $('capture').onclick = async () => {
@@ -170,14 +160,14 @@ $('capture').onclick = async () => {
   note('');
   let got;
   try {
-    got = await runCapture();
+    got = (await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: captureJob }))[0].result;
   } catch (e) {
-    // No access to this site yet. Ask for it with a button of its own, so the request is a direct click.
+    // No access to this site yet. Ask with a button of its own, so the request comes from a direct click.
     const origin = new URL(tab.url).origin + '/*';
     note(`JD Tailor needs your OK to read ${new URL(tab.url).hostname}.`, 'blue');
     const b = document.createElement('button');
-    b.textContent = 'Allow on this site'; b.className = 'primary'; b.style.marginLeft = '8px';
-    b.onclick = () => chrome.permissions.request({ origins: [origin] }).then(async (ok) => {
+    b.textContent = 'Allow on this site'; b.className = 'primary small'; b.style.marginLeft = '8px';
+    b.onclick = () => chrome.permissions.request({ origins: [origin] }).then((ok) => {
       if (!ok) return note('Not allowed. You can still paste the job description below.', 'red');
       note('');
       $('capture').click();
@@ -187,130 +177,186 @@ $('capture').onclick = async () => {
   }
   if (!got || got.text.length < 200) {
     $('jdBox').open = true;
-    return note('Could not find a job description on this page. Select the text of the posting and press Capture again, or paste it below.');
+    return note('Could not find a job description on this page. Select the posting text and press Capture again, or paste it below.');
   }
   job = { ...got, tabUrl: tab.url };
   $('jd').value = job.text;
-  showJob();
+  showJobInfo();
   refreshButtons();
 };
 
 $('jd').addEventListener('input', () => {
-  if (!job) job = { url: tab?.url || '', tabUrl: tab?.url || '', title: '', company: '', location: '', how: 'pasted' };
+  if (!job) job = { url: tab?.url || '', tabUrl: tab?.url || '', title: tab?.title || '', company: '', location: '', how: 'pasted' };
   job.text = $('jd').value;
   $('jdLen').textContent = `(${(job.text.match(/\S+/g) || []).length} words)`;
   refreshButtons();
 });
 
-// ---------- tailoring ----------
-
 $('tailor').onclick = async () => {
-  if (setupNeeded()) { showSetup(true); return note('Finish setup first.', 'red'); }
   job.text = $('jd').value.trim();
   busy = true; refreshButtons();
-  const t0 = Date.now();
-  const tick = () => note(`Tailoring with ${S.model.split('/').pop()}… ${Math.round((Date.now() - t0) / 1000)}s`, 'blue');
-  tick();
-  const timer = setInterval(tick, 1000);
-  try {
-    const { text, usage } = await OR.chat({ key: S.orKey, model: S.model, system: SYSTEM, user: userMessage(job, S.resume), schema: SCHEMA });
-    const answer = parseAnswer(text);
-    const r = { job, answer, model: S.model, usage, seconds: Math.round((Date.now() - t0) / 1000), at: Date.now(),
-      newNumbers: newNumbers(S.resume, answer.resume_markdown),
-      reworded: [...rewordedBullets(S.resume, answer.resume_markdown)] };
-    const all = await results();
-    all[job.tabUrl || job.url] = r;
-    const keys = Object.keys(all).sort((a, b) => all[b].at - all[a].at);
-    for (const k of keys.slice(KEEP_RESULTS)) delete all[k];
-    await chrome.storage.local.set({ results: all });
-    note('');
-    showResult(r);
-  } catch (e) {
-    note(e.message || String(e), 'red');
-    if (e.status === 401) showSetup(true);
-  } finally {
-    clearInterval(timer);
-    busy = false; refreshButtons();
-  }
+  const r = await native({ cmd: 'tailor', job: { url: job.url, title: job.title, company: job.company, location: job.location, text: job.text } });
+  busy = false; refreshButtons();
+  if (!r.ok) return note(r.error, 'red');
+  note('');
+  showJob(r.job);
 };
 
-function li(parent, text, cls) {
-  const el = document.createElement('li');
-  if (cls) el.className = cls;
-  el.textContent = text;
-  parent.appendChild(el);
-  return el;
+// ---------- the job card ----------
+
+const name = (id) => (H?.agents.find((a) => a.id === id) || {}).name || id || '';
+
+function el(tag, text, cls) {
+  const e = document.createElement(tag);
+  if (text != null) e.textContent = text;
+  if (cls) e.className = cls;
+  return e;
 }
 
-function showResult(r) {
-  current = r;
-  const a = r.answer;
-  $('result').hidden = false;
-  $('rRole').textContent = a.role || [r.job.company, r.job.title].filter(Boolean).join(' · ');
-  $('rFit').textContent = a.fit || '';
-  const el = $('rElig'); el.innerHTML = '';
-  for (const c of a.eligibility) li(el, `${c.constraint}${c.note ? ': ' + c.note : ''}`, c.status);
-  const w = $('rWarn');
-  w.hidden = !r.newNumbers.length;
-  w.textContent = r.newNumbers.length ? `These numbers are not in your resume: ${r.newNumbers.join(', ')}. Delete them unless you know they're true.` : '';
-  $('rResume').innerHTML = render(a.resume_markdown, new Set(r.reworded));
-  const ch = $('rChanges'); ch.innerHTML = '';
-  for (const c of a.changes) li(ch, c);
-  const g = $('rGaps'); g.innerHTML = '';
-  for (const x of a.gaps) {
-    const item = li(g, '');
-    const b = document.createElement('b'); b.textContent = x.requirement;
-    item.append(b, document.createTextNode(x.advice ? ` · ${x.advice}` : ''));
+function list(title, items) {
+  if (!items || !items.length) return null;
+  const box = document.createDocumentFragment();
+  box.appendChild(el('h4', title));
+  const ul = el('ul');
+  for (const x of items) ul.appendChild(el('li', typeof x === 'string' ? x : JSON.stringify(x)));
+  box.appendChild(ul);
+  return box;
+}
+
+function showJob(j) {
+  shown = j;
+  $('job').hidden = false;
+  $('jobTitle').textContent = [j.company, j.title].filter(Boolean).join(' · ');
+  const b = $('jobBadge');
+  b.className = 'badge ' + j.status;
+  b.textContent = STATUS[j.status] || j.status;
+
+  const tl = $('timeline');
+  tl.innerHTML = '';
+  for (const s of j.stages || []) {
+    const li = el('li', s.label, s.status);
+    if (s.detail) li.appendChild(el('span', s.detail, 'd'));
+    tl.appendChild(li);
   }
-  if (!a.gaps.length) li(g, 'No gaps found.');
-  $('rKeys').textContent = [a.keywords_covered.length && `Covered: ${a.keywords_covered.join(', ')}`,
-    a.keywords_missing.length && `Missing: ${a.keywords_missing.join(', ')}`].filter(Boolean).join('  ·  ');
-  const u = r.usage || {};
-  $('rCost').textContent = [r.model, r.seconds != null && `${r.seconds}s`, u.total_tokens && `${u.total_tokens.toLocaleString()} tokens`,
-    u.cost != null && `$${(+u.cost).toFixed(3)}`].filter(Boolean).join(' · ');
+  const meta = [`writer ${name(j.writer)}`, `reviewers ${name(j.reviewer)}`];
+  if (j.cost) meta.push(`$${(+j.cost).toFixed(2)} in agent usage`);
+  if (j.started && j.finished) meta.push(`${Math.round((new Date(j.finished) - new Date(j.started)) / 60000)} min`);
+  $('jobMeta').textContent = meta.join(' · ');
+
+  const r = j.result;
+  const g = $('gate');
+  g.hidden = !(r && r.gate && r.gate !== 'n/a') && j.status !== 'failed' && j.status !== 'skip';
+  if (j.status === 'ready') { g.className = 'alert green'; g.textContent = `Passed the gate: HM said ${r.hm}, ATS ${r.ats}. Read it once more, then send it.`; }
+  else if (j.status === 'needs_you') { g.className = 'alert'; g.textContent = `Didn't pass the gate (HM ${r?.hm}, ATS ${r?.ats}). The resume is finished anyway: read the reviews and decide whether to send it as is, revise, or skip.`; }
+  else if (j.status === 'failed') { g.className = 'alert red'; g.textContent = j.error || 'Something went wrong; see agent.log in the job folder.'; }
+  else if (j.status === 'skip') { g.className = 'alert red'; g.textContent = r?.summary || 'The writer thinks this job is not a fit.'; }
+
+  $('result').hidden = !r;
+  if (r) {
+    $('rSummary').textContent = r.summary || '';
+    $('rLead').textContent = r.lead ? `Leads with: ${r.lead}` : '';
+    const box = $('rLists');
+    box.innerHTML = '';
+    for (const part of [list('Check these numbers: you reported them, the bank shows no re-measurement', r.unverified_numbers),
+      list('Eligibility notes (for the form)', r.constraints), list('Gaps: the JD wants it, your bank has no evidence', r.gaps),
+      list('Left out', r.dropped)]) if (part) box.appendChild(part);
+    const rv = $('reviews');
+    rv.innerHTML = '';
+    const files = [['analysis', 'Analysis']];
+    for (const s of j.stages || []) {
+      const m = s.key.match(/^(hm|ats)(\d)$/);
+      if (m && s.status !== 'todo') files.push([`review_${m[1]}_${m[2]}`, `${m[1].toUpperCase()} ${m[2]}: ${s.detail || '…'}`]);
+    }
+    for (const [file, label] of files) {
+      const btn = el('button', label, 'small');
+      btn.onclick = async () => {
+        const t = $('reviewText');
+        if (!t.hidden && t.dataset.file === file) { t.hidden = true; return; }
+        const res = await native({ cmd: 'review', id: j.id, name: file });
+        t.textContent = res.ok ? (res.text || '(empty)') : res.error;
+        t.dataset.file = file;
+        t.hidden = false;
+      };
+      rv.appendChild(btn);
+    }
+  }
+  const qs = r?.questions || [];
+  $('ask').hidden = !(j.status === 'needs_user' || (qs.length && j.status !== 'ready' && !ACTIVE.has(j.status)));
+  const ql = $('questions');
+  ql.innerHTML = '';
+  for (const q of qs) ql.appendChild(el('li', q));
+
+  const hasPdf = !!(r && r.pdf);
+  $('openPdf').hidden = !hasPdf;
+  $('downloadPdf').hidden = !hasPdf;
+  $('reveal').hidden = !(r || j.status === 'failed');
+  $('cancel').hidden = !ACTIVE.has(j.status);
+
+  clearTimeout(poll);
+  if (ACTIVE.has(j.status)) poll = setTimeout(refreshJob, 3000);
+  else loadRecent();
 }
 
-document.querySelectorAll('.tabs button').forEach((b) => (b.onclick = () => {
-  document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b));
-  document.querySelectorAll('[data-pane]').forEach((p) => (p.hidden = p.dataset.pane !== b.dataset.tab));
-}));
-
-function fileName(ext) {
-  const name = (current.answer.resume_markdown.match(/^#\s+(.+)$/m) || [, 'Resume'])[1];
-  const co = current.job.company || '';
-  return [name, co, 'Resume'].filter(Boolean).join('_').replace(/[^\w\-]+/g, '_').replace(/_+/g, '_') + ext;
+async function refreshJob() {
+  if (!shown) return;
+  const r = await native({ cmd: 'status', id: shown.id });
+  if (r.ok) showJob(r.job);
+  else poll = setTimeout(refreshJob, 5000);
 }
 
-$('copy').onclick = async () => {
-  await navigator.clipboard.writeText(current.answer.resume_markdown);
-  $('copy').textContent = 'Copied ✓';
-  setTimeout(() => ($('copy').textContent = 'Copy text'), 1500);
+async function pdfBlob() {
+  const r = await native({ cmd: 'pdf', id: shown.id });
+  if (!r.ok) { note(r.error, 'red'); return null; }
+  const bin = atob(r.b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: 'application/pdf' });
+}
+
+$('openPdf').onclick = async () => {
+  const b = await pdfBlob();
+  if (b) chrome.tabs.create({ url: URL.createObjectURL(b) });
 };
-
-$('download').onclick = () => {
+$('downloadPdf').onclick = async () => {
+  const b = await pdfBlob();
+  if (!b) return;
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([current.answer.resume_markdown], { type: 'text/markdown' }));
-  a.download = fileName('.md');
+  a.href = URL.createObjectURL(b);
+  a.download = 'Resume.pdf';
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+$('reveal').onclick = () => native({ cmd: 'reveal', id: shown.id });
+$('cancel').onclick = async () => { const r = await native({ cmd: 'cancel', id: shown.id }); if (r.ok) showJob(r.job); };
+$('sendAnswer').onclick = async () => {
+  const text = $('answer').value.trim();
+  if (!text) return;
+  const r = await native({ cmd: 'answer', id: shown.id, text });
+  if (!r.ok) return note(r.error, 'red');
+  $('answer').value = '';
+  showJob(r.job);
 };
 
-$('pdf').onclick = async () => {
-  await chrome.storage.local.set({ printDoc: { md: current.answer.resume_markdown, title: fileName('') } });
-  chrome.tabs.create({ url: chrome.runtime.getURL('print.html') });
-};
+async function loadRecent() {
+  if (!H) return;
+  const r = await native({ cmd: 'list' });
+  const ul = $('recent');
+  ul.innerHTML = '';
+  const items = (r.ok ? r.jobs : []).filter((x) => !shown || x.id !== shown.id).slice(0, 8);
+  $('recentBox').hidden = !items.length;
+  for (const x of items) {
+    const li = el('li');
+    li.append(el('span', [x.company, x.title].filter(Boolean).join(' · ') || x.id), el('span', STATUS[x.status] || x.status, 'badge ' + x.status));
+    li.onclick = async () => { const s = await native({ cmd: 'status', id: x.id }); if (s.ok) showJob(s.job); };
+    ul.appendChild(li);
+  }
+}
 
 // ---------- start ----------
-
-if (!OR.canLogin()) { $('loginRow').hidden = true; $('loginHint').hidden = true; $('pasteBox').open = true; }
 
 chrome.tabs.onActivated.addListener(() => loadPage());
 chrome.tabs.onUpdated.addListener((id, info) => { if (tab && id === tab.id && (info.url || info.status === 'complete')) loadPage(); });
 
 (async () => {
-  await loadSettings();
-  showSetup(setupNeeded());
+  await hello();
   await loadPage();
-  showKey();
-  loadModels();
 })();

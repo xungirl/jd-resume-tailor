@@ -9,44 +9,35 @@
 <body>
 <header class="top">
   <div class="brand"><img src="icons/32.png" alt=""><b>JD Tailor</b></div>
-  <button id="gear" class="conn" title="Settings"><i></i><span id="connText">not connected</span></button>
+  <button id="gear" class="conn" title="Agents and settings"><i></i><span id="connText">checking…</span></button>
 </header>
 
 <main>
-  <section id="setup" class="card" hidden>
-    <h2>Setup</h2>
+  <section id="install" class="card" hidden>
+    <h2>One-time setup</h2>
+    <p>JD Tailor runs the AI agent already on your computer (Claude Code, Codex, Grok, or DeepSeek). Connect it once: run this in Terminal.</p>
+    <div class="cmd"><code id="installCmd">~/jd-tailor/install.sh</code><button id="copyCmd" class="small">Copy</button></div>
+    <p class="muted small">It registers a small helper with Chrome and Edge. No server, no port, no password. Then come back here.</p>
+    <div class="row"><button id="retry" class="primary">Check again</button><span id="installErr" class="muted small"></span></div>
+  </section>
 
-    <div class="step">
-      <div class="stepTitle">1. Connect an AI account</div>
-      <div id="loginRow" class="row">
-        <button id="login" class="primary">Connect OpenRouter</button>
-        <span class="muted small">log in, approve, done</span>
-      </div>
-      <p id="loginHint" class="muted small">First time? OpenRouter asks you to pick a credit amount. You can skip it and start with free models.</p>
-      <details id="pasteBox">
-        <summary>I have an API key</summary>
-        <div class="row"><input id="keyInput" type="password" placeholder="sk-or-…" autocomplete="off"><button id="saveKey">Save</button></div>
-        <p class="muted small">Get one at <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">openrouter.ai/settings/keys</a>.</p>
-      </details>
-      <div id="keyStatus" class="muted small"></div>
-      <label>Model
-        <select id="model"></select>
+  <section id="agents" class="card" hidden>
+    <h2>Agents</h2>
+    <ul id="agentList" class="agents"></ul>
+    <label>Writes the resume
+      <select id="writer"></select>
+    </label>
+    <label>Reviews it (HM + ATS, blind)
+      <select id="reviewer"></select>
+    </label>
+    <p class="muted small">A different reviewer than the writer catches more: it doesn't share the writer's blind spots.</p>
+    <div id="dsBox" hidden>
+      <label>DeepSeek API key <span class="muted">(stored only on this computer)</span>
+        <div class="row"><input id="dsKey" type="password" placeholder="sk-…" autocomplete="off"><button id="saveDs">Save</button></div>
       </label>
-      <div id="modelNote" class="muted small"></div>
     </div>
-
-    <div class="step">
-      <div class="stepTitle">2. Your resume</div>
-      <p class="muted small">Paste your resume as text. A longer "bullet bank" with everything you've done works even better: it picks the parts that fit each job.</p>
-      <textarea id="resume" rows="10" placeholder="# Your Name&#10;email · phone · city · linkedin&#10;&#10;## Education&#10;…"></textarea>
-      <div class="row">
-        <label class="file">Load a .txt / .md file<input id="resumeFile" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown"></label>
-        <span id="resumeCount" class="muted small"></span>
-      </div>
-      <p class="muted small">Stored only in this browser. It's sent only to the model you picked, when you press Tailor.</p>
-    </div>
-
-    <div class="row"><button id="doneSetup" class="primary">Done</button></div>
+    <div id="envWarn" class="alert" hidden></div>
+    <div class="row"><button id="closeAgents" class="primary">Done</button></div>
   </section>
 
   <section id="page" class="card page">
@@ -57,6 +48,7 @@
       <button id="capture">Capture JD</button>
       <button id="tailor" class="primary" disabled>Tailor my resume</button>
     </div>
+    <div id="who" class="muted small"></div>
     <div id="pageMsg" class="alert" hidden></div>
     <details id="jdBox">
       <summary>Job description <span id="jdLen" class="muted small"></span></summary>
@@ -64,32 +56,39 @@
     </details>
   </section>
 
-  <section id="result" class="card" hidden>
-    <div class="eyebrow">Tailored for</div>
-    <div id="rRole" class="ttl"></div>
-    <p id="rFit"></p>
-    <ul id="rElig" class="elig"></ul>
-    <div id="rWarn" class="alert red" hidden></div>
-    <div class="tabs">
-      <button data-tab="resume" class="on">Resume</button>
-      <button data-tab="changes">Changes</button>
-      <button data-tab="gaps">Gaps</button>
+  <section id="job" class="card" hidden>
+    <div class="row between">
+      <div class="eyebrow">Tailoring</div>
+      <span id="jobBadge" class="badge"></span>
     </div>
-    <div data-pane="resume">
-      <p class="muted small legend"><span class="reworded">dotted underline</span> = reworded, check it says only what's true.</p>
-      <div id="rResume" class="resume"></div>
+    <div id="jobTitle" class="ttl"></div>
+    <div id="gate" class="alert" hidden></div>
+    <ol id="timeline" class="timeline"></ol>
+    <div id="jobMeta" class="muted small"></div>
+    <div id="result" hidden>
+      <p id="rSummary"></p>
+      <div id="rLead" class="small"></div>
+      <div id="rLists"></div>
+      <div id="reviews" class="row"></div>
+      <pre id="reviewText" class="reviewText" hidden></pre>
     </div>
-    <div data-pane="changes" hidden><ul id="rChanges"></ul></div>
-    <div data-pane="gaps" hidden>
-      <ul id="rGaps"></ul>
-      <div id="rKeys" class="small"></div>
+    <div id="ask" hidden>
+      <div class="stepTitle">It needs your answer</div>
+      <ul id="questions"></ul>
+      <textarea id="answer" rows="3" placeholder="Your answer. The writer starts over with it."></textarea>
+      <div class="row"><button id="sendAnswer" class="primary">Send and continue</button></div>
     </div>
     <div class="row">
-      <button id="pdf" class="primary">Save as PDF</button>
-      <button id="copy">Copy text</button>
-      <button id="download">Download .md</button>
+      <button id="openPdf" class="primary" hidden>Open PDF</button>
+      <button id="downloadPdf" hidden>Download</button>
+      <button id="reveal" hidden>Show in Finder</button>
+      <button id="cancel" hidden>Stop</button>
     </div>
-    <div id="rCost" class="muted small"></div>
+  </section>
+
+  <section id="recentBox" class="card" hidden>
+    <div class="eyebrow">Recent</div>
+    <ul id="recent" class="recent"></ul>
   </section>
 </main>
 
