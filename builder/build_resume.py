@@ -75,6 +75,7 @@ pdfmetrics.registerFontFamily(FONT['regular'], normal=FONT['regular'], bold=FONT
 
 
 TAG_COLOR = os.environ.get('TAG_COLOR', '#5A5A5A')  # tags dimmer than the description
+TAG_STYLE = os.environ.get('TAG_STYLE', 'right')   # 'right' (next to the links) or 'inline'
 
 
 def link(url, label):
@@ -160,16 +161,23 @@ def build(data, name, spec, outdir):
             head += ''.join(' | ' + link(u, l) for u, l in links)
             row(head, proj.get('dates', ''), gap=1)
         else:
-            # bold name — regular description | italic tags, links right-aligned like the date column above
-            head = f"<b>{proj['name']}</b> — {proj['desc']}" + (f' <font color="{TAG_COLOR}">| <i>{tags}</i></font>' if tags else '')
+            # left: bold name — what it is; right column (like the dates above): gray italic tags, then links.
+            # TAG_STYLE=inline keeps the tags on the left after a "|".
             plain = ' · '.join(l for _, l in links)
             rw = pdfmetrics.stringWidth(plain, FONT['regular'], BODY) if links else 0
-            hp = Paragraph(head, st['body']); _, h = hp.wrap(TEXT_WIDTH - rw - (14 if links else 0), HEIGHT)
+            right = ' · '.join(link(u, l) for u, l in links)
+            head = f"<b>{proj['name']}</b> — {proj['desc']}"
+            if tags and TAG_STYLE == 'inline':
+                head += f' <font color="{TAG_COLOR}">| <i>{tags}</i></font>'
+            elif tags:
+                rw += pdfmetrics.stringWidth(tags + ('    ' if links else ''), FONT['italic'], BODY)
+                right = f'<font color="{TAG_COLOR}"><i>{tags}</i></font>' + ('&nbsp;' * 4 + right if links else '')
+            hp = Paragraph(head, st['body']); _, h = hp.wrap(TEXT_WIDTH - rw - (14 if right else 0), HEIGHT)
             if h > LEADING + .1:
                 warnings.append(f"heading wraps: {proj['name']} - shorten desc or tags")
             hp.drawOn(c, LEFT, y[0] - h)
-            if links:
-                rp = Paragraph(' · '.join(link(u, l) for u, l in links), st['right']); _, hr = rp.wrap(rw + 4, HEIGHT)
+            if right:
+                rp = Paragraph(right, st['right']); _, hr = rp.wrap(rw + 4, HEIGHT)
                 rp.drawOn(c, RIGHT - rw - 4, y[0] - hr)
             y[0] -= max(h, LEADING) + 1
         for b in p['bullets']:
