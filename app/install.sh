@@ -1,5 +1,5 @@
 #!/bin/sh
-# One-time setup: register JD Tailor's local helper with Chrome and Edge.
+# One-time setup: register JD Resume Tailor's local helper with Chrome and Edge.
 #   ./install.sh            install
 #   ./install.sh --uninstall
 set -e

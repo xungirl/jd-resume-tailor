@@ -1,7 +1,7 @@
-// JD Tailor panel: capture the JD here, run the agents on your computer through native messaging.
+// JD Resume Tailor panel: capture the JD here, run the agents on your computer through native messaging.
 import { captureJob } from './lib/capture.js';
 
-const HOST = 'io.github.xungirl.jd_tailor';
+const HOST = 'io.github.xungirl.jd_resume_tailor';
 const $ = (id) => document.getElementById(id);
 const ACTIVE = new Set(['queued', 'running']);
 const STATUS = { queued: 'queued', running: 'running', ready: 'ready', needs_you: 'needs your call', needs_user: 'question for you',
@@ -199,7 +199,7 @@ async function capture(target) {
 }
 
 function askAccess(origins, label) {
-  note(`JD Tailor needs your OK to read ${label}.`, 'blue');
+  note(`JD Resume Tailor needs your OK to read ${label}.`, 'blue');
   const b = document.createElement('button');
   b.textContent = 'Allow'; b.className = 'primary small'; b.style.marginLeft = '8px';
   b.onclick = () => chrome.permissions.request({ origins: origins.map((o) => o + '/*') }).then((ok) => {

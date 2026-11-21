@@ -47,6 +47,7 @@ An agent skill that tailors your resume to each job description by **choosing an
 - [What it runs, reads and sends](#what-it-runs-reads-and-sends)
 - [Tested](#tested)
 - [Why it works this way](#why-it-works-this-way)
+- [The app: browser extension with blind reviewers (beta)](#the-app-browser-extension-with-blind-reviewers-beta)
 
 ## Install in one line
 
@@ -301,6 +302,20 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 - **Bullet bank, not documents.** Write each true bullet once, with a key. A tailored resume is a 6-line *variant* that chooses skill groups and bullets.
 - **Tailoring means choosing and ordering.** Gaps get reported to you as interview prep, not hidden in the PDF.
 - **The form matters as much as the PDF.** ATS autofill quietly writes false statements into your application. The skill checks the review page before you tick the "everything is true" box.
+
+## The app: browser extension with blind reviewers (beta)
+
+[`app/`](app/) puts this skill behind a button.
+- **The flow.**
+  1. On any job page, click **Capture JD**, then **Tailor my resume**.
+  2. The AI agent already on your computer writes the resume with this skill: Claude Code, Codex, Grok Build, or DeepSeek inside Claude Code.
+  3. Script checks measure the page.
+  4. A hiring-manager reviewer and an ATS reviewer, each in a folder holding only the JD and the PDF, review it before you see it. Then comes a revision and a gate.
+- **No account, no server, no token.** The extension reaches your computer through Chrome's native messaging, registered once with `app/install.sh`.
+- **Safe with your bank.** Your bullet bank is backed up before every run, and you can undo the run's changes in one click.
+- **Your repos too.** It can mine your project repos for projects that aren't on your resume yet, using only facts found in their files.
+
+See [app/README.md](app/README.md).
 
 ## License
 

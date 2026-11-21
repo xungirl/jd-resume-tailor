@@ -56,7 +56,7 @@ def main():
         'writer': 'claude', 'reviewer': 'same', 'tailor_config': str(tmp / 'no-config.md'),
         'agents': {'claude': {'command': fake}, 'codex': {'command': fake}}}))
     launcher = tmp / 'jdt-host'
-    launcher.write_text(f'#!/bin/sh\nexport PATH={json.dumps(os.environ["PATH"])}\nexport JD_TAILOR_HOME={json.dumps(str(home))}\n'
+    launcher.write_text(f'#!/bin/sh\nexport PATH={json.dumps(os.environ["PATH"])}\nexport JD_RESUME_TAILOR_APP_HOME={json.dumps(str(home))}\n'
                         f'exec {json.dumps(sys.executable)} {json.dumps(str(ROOT / "host" / "jdt.py"))} host "$@"\n')
     launcher.chmod(0o755)
     profile = tmp / 'profile'

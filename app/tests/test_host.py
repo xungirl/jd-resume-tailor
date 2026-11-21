@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TMP = Path(tempfile.mkdtemp(prefix='jdt-test-'))
-os.environ['JD_TAILOR_HOME'] = str(TMP / 'home')
+os.environ['JD_RESUME_TAILOR_APP_HOME'] = str(TMP / 'home')
 sys.path.insert(0, str(ROOT / 'host'))
 sys.path.insert(0, str(ROOT / 'tests'))
 
@@ -181,6 +181,7 @@ class Projects(unittest.TestCase):
         self.assertIn('Write(//tmp/proj a/**)', dis)
         self.assertIn('Bash(curl:*)', dis)
         self.assertIn('Read(~/.ssh/**)', dis)
+        self.assertIn(f'Read(/{jdt.home() / "config.json"})', dis)
         self.assertEqual(cmd.count('--disallowedTools'), 1)
         cmd, _ = jdt.build_command('claude', 'hi', TMP, False, cfg)
         self.assertNotIn('/tmp/proj a', cmd)  # reviewers never see your repos

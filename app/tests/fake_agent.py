@@ -40,7 +40,7 @@ if role.startswith('ROLE: writer'):
                                                      'summary': 'Stopped: clearance required.'}))
         print(json.dumps({'result': 'stopped', 'session_id': 'sess-1', 'total_cost_usd': 0.01}))
         sys.exit(0)
-    log = Path(os.environ.get('JD_TAILOR_HOME', '/tmp')) / 'writes.log'
+    log = Path(os.environ.get('JD_RESUME_TAILOR_APP_HOME', '/tmp')) / 'writes.log'
     with open(log, 'a') as f:
         f.write(f'start {cwd.name} {time.time()}\n')
     time.sleep(float(os.environ.get('FAKE_SLEEP', '0')))

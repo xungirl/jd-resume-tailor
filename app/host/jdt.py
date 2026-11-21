@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""JD Tailor's local side: the browser's native messaging host, and the worker that runs the agents.
+"""JD Resume Tailor's local side: the browser's native messaging host, and the worker that runs the agents.
 
     jdt.py install      register with Chrome / Edge (once); prints what it did
     jdt.py uninstall    remove that registration
@@ -9,7 +9,7 @@
 
 No server, no port, no token: the browser starts `host` itself, and only for this extension's ID.
 The agents are the CLIs you already logged in to (Claude Code, Codex, Grok Build), or Claude Code
-pointed at DeepSeek with your DeepSeek key. Data lives in ~/.config/jd-tailor ($JD_TAILOR_HOME).
+pointed at DeepSeek with your DeepSeek key. Data lives in ~/.config/jd-resume-tailor/app ($JD_RESUME_TAILOR_APP_HOME).
 Python 3.9+, standard library only.
 """
 import base64
@@ -34,7 +34,7 @@ VERSION = '0.2.0'
 HERE = Path(__file__).resolve().parent
 FLOW = HERE / 'flow'
 CHECK = HERE / 'check.py'
-HOST_NAME = 'io.github.xungirl.jd_tailor'
+HOST_NAME = 'io.github.xungirl.jd_resume_tailor'
 EXT_ID = 'hmjpobnjbippkgjgnmopcbnbhipcadfj'  # fixed by the "key" in extension/manifest.json
 
 sys.path.insert(0, str(HERE))
@@ -76,7 +76,7 @@ def model_for(agent: str, writing: bool, cfg: dict) -> str:
 # ---------------------------------------------------------------- config and paths
 
 def home() -> Path:
-    return Path(os.environ.get('JD_TAILOR_HOME') or '~/.config/jd-tailor').expanduser()
+    return Path(os.environ.get('JD_RESUME_TAILOR_APP_HOME') or '~/.config/jd-resume-tailor/app').expanduser()
 
 
 def load_config() -> dict:
@@ -105,6 +105,9 @@ def now() -> str:
 
 
 def skill_dir():
+    here = HERE.parent.parent / 'skills' / 'jd-resume-tailor'  # this repo's own skill comes first
+    if (here / 'SKILL.md').exists():
+        return here.resolve()
     for d in ['~/.claude/skills/jd-resume-tailor', '~/.agents/skills/jd-resume-tailor', '~/jd-resume-tailor/skills/jd-resume-tailor']:
         p = Path(d).expanduser()
         if (p / 'SKILL.md').exists():
@@ -232,7 +235,7 @@ def _git(*args, cwd=None, timeout=180):
 
 
 def fetch_repo(owner: str, name: str, log=None) -> Path:
-    """A shallow, read-only copy of a GitHub repo under ~/.config/jd-tailor/repos (pulled if it exists).
+    """A shallow, read-only copy of a GitHub repo under ~/.config/jd-resume-tailor/app/repos (pulled if it exists).
     Uses gh's login when gh is installed, so your private repos work too."""
     d = home() / 'repos' / f'{owner}__{name}'
     try:
@@ -256,7 +259,7 @@ def fetch_repo(owner: str, name: str, log=None) -> Path:
 def user_repos(login: str, limit=20) -> list:
     """Public, non-fork, non-archived repos of a GitHub user, most recently pushed first."""
     url = f'https://api.github.com/users/{login}/repos?per_page=100&sort=pushed'
-    req = urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'jd-tailor'})
+    req = urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'jd-resume-tailor'})
     with urllib.request.urlopen(req, timeout=30) as r:
         items = json.loads(r.read())
     return [x['name'] for x in items if not x.get('fork') and not x.get('archived')][:limit]
@@ -394,7 +397,8 @@ def build_command(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, 
             deny += ['WebFetch', 'WebSearch', *[f'Bash({c}:*)' for c in
                     ('curl', 'wget', 'nc', 'ncat', 'ssh', 'scp', 'sftp', 'rsync', 'ftp', 'telnet', 'open', 'osascript', 'security')],
                     *[f'Read({p})' for p in ('~/.ssh/**', '~/.aws/**', '~/.gnupg/**', '~/.config/gcloud/**', '~/.netrc',
-                                              '~/.claude.json', '~/.codex/**', '~/.grok/**', '**/.env', '**/.env.*')]]
+                                              '~/.claude.json', '~/.codex/**', '~/.grok/**', '**/.env', '**/.env.*')],
+                     f'Read(/{home() / "config.json"})', f'Edit(/{home() / "config.json"})']  # may hold your DeepSeek key
         if repos:  # your project repos are evidence to read, never to change
             deny += [f'{t}(/{r}/**)' for r in repos for t in ('Edit', 'Write')]
         if deny:
@@ -1079,18 +1083,28 @@ def manifest_dirs() -> list:
     return [base / n / 'NativeMessagingHosts' for n in names if (base / n).exists()]
 
 
+OLD_HOST_NAME = 'io.github.xungirl.jd_tailor'   # before the app moved into jd-resume-tailor
+OLD_HOME = Path('~/.config/jd-tailor').expanduser()
+
+
 def install(ext_ids=None):
     ext_ids = ext_ids or [EXT_ID]
     h = home()
+    if OLD_HOME.exists() and not h.exists() and not os.environ.get('JD_RESUME_TAILOR_APP_HOME'):
+        h.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(OLD_HOME), str(h))  # keep your earlier jobs and settings
+        print(f'moved {OLD_HOME} to {h}')
     h.mkdir(parents=True, exist_ok=True)
+    for d in manifest_dirs():
+        (d / f'{OLD_HOST_NAME}.json').unlink(missing_ok=True)
     launcher = h / 'jdt-host'
     # Browsers start the host with a bare PATH: keep the one from install time, so claude/codex/grok are found.
     launcher.write_text('#!/bin/sh\n'
                         f'export PATH={json.dumps(os.environ.get("PATH", "/usr/bin:/bin"))}\n'
-                        + (f'export JD_TAILOR_HOME={json.dumps(str(h))}\n' if os.environ.get('JD_TAILOR_HOME') else '')
+                        + (f'export JD_RESUME_TAILOR_APP_HOME={json.dumps(str(h))}\n' if os.environ.get('JD_RESUME_TAILOR_APP_HOME') else '')
                         + f'exec {json.dumps(sys.executable)} {json.dumps(str(Path(__file__).resolve()))} host "$@"\n')
     launcher.chmod(0o755)
-    manifest = {'name': HOST_NAME, 'description': 'JD Tailor local agent runner', 'path': str(launcher),
+    manifest = {'name': HOST_NAME, 'description': 'JD Resume Tailor local agent runner', 'path': str(launcher),
                 'type': 'stdio', 'allowed_origins': [f'chrome-extension://{i}/' for i in ext_ids]}
     done = []
     for d in manifest_dirs():
@@ -1112,7 +1126,7 @@ def uninstall():
 
 def doctor():
     cfg = load_config()
-    print(f'JD Tailor {VERSION}  data: {home()}')
+    print(f'JD Resume Tailor {VERSION}  data: {home()}')
     for a in agent_status(cfg):
         print(f"  {'✓' if a['ready'] else '✗'} {a['name']:<28} {a['note']}")
     s = skill_dir()

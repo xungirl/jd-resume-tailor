@@ -33,7 +33,7 @@ You need:
 - Python 3.9+.
 - poppler: `brew install poppler`.
 - At least one of the agents above.
-- The [jd-resume-tailor](https://github.com/xungirl/jd-resume-tailor) skill, set up once. Run it once in Claude Code so it learns where your bullet bank is.
+- This repo's skill, set up once. Run it once in Claude Code so it learns where your bullet bank is.
 
 Then:
 
@@ -106,7 +106,7 @@ Each job lives in `~/.config/jd-tailor/jobs/<company_title_hash>/`:
 ## Tests
 
 ```sh
-python3 -m unittest tests/test_host.py -v                    # 10 tests: checks, framing, the whole flow, questions
+cd app && python3 -m unittest tests/test_host.py -v                    # 10 tests: checks, framing, the whole flow, questions
 uv run --with playwright==1.55.0 python tests/e2e.py         # 14 checks in a real browser over real native messaging
 ```
 
