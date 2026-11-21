@@ -288,6 +288,8 @@ End-to-end runs on 2026-11-20. Each run installed the skill from GitHub into an 
 
 **DeepSeek Harness** (developer preview). Same install and prompt, run with `dsh --profile headless --permission-mode workspace-write --approval-policy never` and a separate `DSH_HOME`. Its first tool call loaded the skill through dsh's native `skill` tool. It built the bank (rebuilt text identical to the source), the tailored PDF and the upload copy, flagged the missing AI evidence as a gap without adding any, and left the cloned repo untouched.
 
+**One-line install** (`install.sh`, 2026-11-20). Both one-liners were run from GitHub in clean environments: the Claude Code line in an empty Claude config, and the `git clone … && install.sh` line in a fresh `HOME`, followed by a Codex run that found the skill through `~/.agents/skills` with no other setup. That run turned up two rule gaps, fixed in SKILL.md: Codex added a work-authorization line the user had only mentioned in chat, and copied and edited the builder to fix a widow. A second run from a fresh clone, with the fixed rules, added no word that wasn't in the source resume and used the builder in place.
+
 **Note for testers:** the skill reads `~/.config/jd-resume-tailor/config.md` first. Point `HOME` at a scratch folder if you don't want an existing config read.
 
 </details>
