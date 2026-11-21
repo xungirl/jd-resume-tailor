@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JD Tailor</title>
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img src="icons/32.png" alt=""><b>JD Tailor</b></div>
+  <button id="gear" class="conn" title="Agents and settings"><i></i><span id="connText">checking…</span></button>
+</header>
+
+<main>
+  <section id="install" class="card" hidden>
+    <h2>One-time setup</h2>
+    <p>JD Tailor runs the AI agent already on your computer (Claude Code, Codex, Grok, or DeepSeek). Connect it once: run this in Terminal.</p>
+    <div class="cmd"><code id="installCmd">~/jd-tailor/install.sh</code><button id="copyCmd" class="small">Copy</button></div>
+    <p class="muted small">It registers a small helper with Chrome and Edge. No server, no port, no password. Then come back here.</p>
+    <div class="row"><button id="retry" class="primary">Check again</button><span id="installErr" class="muted small"></span></div>
+  </section>
+
+  <section id="agents" class="card" hidden>
+    <h2>Agents</h2>
+    <ul id="agentList" class="agents"></ul>
+    <label>Writes the resume
+      <div class="row"><select id="writer"></select><select id="writerModel"></select></div>
+    </label>
+    <input id="writerCustom" placeholder="model name, e.g. gpt-5.6-sol" hidden>
+    <label>Reviews it (HM + ATS, blind)
+      <div class="row"><select id="reviewer"></select><select id="reviewerModel"></select></div>
+    </label>
+    <input id="reviewerCustom" placeholder="model name" hidden>
+    <label>Review rounds
+      <select id="mode">
+        <option value="quick">Quick: one round of reviews (about half the time)</option>
+        <option value="thorough">Thorough: up to three rounds, as in the full flow</option>
+      </select>
+    </label>
+    <p class="muted small">A different reviewer than the writer catches more: it doesn't share the writer's blind spots.</p>
+    <label>Your projects <span class="muted">(one per line: a folder, a GitHub repo URL, or github:yourname)</span>
+      <textarea id="projects" rows="3" placeholder="~/flowbeat&#10;https://github.com/you/raft-kv&#10;github:you"></textarea>
+    </label>
+    <div class="row"><button id="saveProjects" class="small">Save projects</button><span id="projMsg" class="muted small"></span></div>
+    <p class="muted small">The writer may add a project that isn't on your resume yet, using only facts it finds in that project's files. It reads them, never changes them.</p>
+    <div id="dsBox" hidden>
+      <label>DeepSeek API key <span class="muted">(stored only on this computer)</span>
+        <div class="row"><input id="dsKey" type="password" placeholder="sk-…" autocomplete="off"><button id="saveDs">Save</button></div>
+      </label>
+    </div>
+    <div id="envWarn" class="alert" hidden></div>
+    <div class="row"><button id="closeAgents" class="primary">Done</button></div>
+  </section>
+
+  <section id="page" class="card page">
+    <div class="eyebrow">This page</div>
+    <div id="pageTitle" class="ttl">—</div>
+    <div id="pageMeta" class="muted small"></div>
+    <div class="row">
+      <button id="capture">Capture JD</button>
+      <button id="tailor" class="primary" disabled>Tailor my resume</button>
+    </div>
+    <div id="who" class="muted small"></div>
+    <div id="pageMsg" class="alert" hidden></div>
+    <details id="jdBox">
+      <summary>Job description <span id="jdLen" class="muted small"></span></summary>
+      <textarea id="jd" rows="8" placeholder="Capture didn't work? Paste the job description here."></textarea>
+    </details>
+  </section>
+
+  <section id="job" class="card" hidden>
+    <div class="row between">
+      <div class="eyebrow">Tailoring</div>
+      <span id="jobBadge" class="badge"></span>
+    </div>
+    <div id="jobTitle" class="ttl"></div>
+    <div id="gate" class="alert" hidden></div>
+    <ol id="timeline" class="timeline"></ol>
+    <div id="jobMeta" class="muted small"></div>
+    <div id="result" hidden>
+      <p id="rSummary"></p>
+      <div id="rLead" class="small"></div>
+      <div id="rLists"></div>
+      <div id="reviews" class="row"></div>
+      <pre id="reviewText" class="reviewText" hidden></pre>
+    </div>
+    <div id="ask" hidden>
+      <div class="stepTitle">It needs your answer</div>
+      <ul id="questions"></ul>
+      <textarea id="answer" rows="3" placeholder="Your answer. The writer starts over with it."></textarea>
+      <div class="row"><button id="sendAnswer" class="primary">Send and continue</button></div>
+    </div>
+    <div class="row">
+      <button id="openPdf" class="primary" hidden>Open PDF</button>
+      <button id="downloadPdf" hidden>Download</button>
+      <button id="reveal" hidden>Show in Finder</button>
+      <button id="cancel" hidden>Stop</button>
+      <button id="reset" title="Stop if running and start this posting over">Reset</button>
+    </div>
+  </section>
+
+  <section id="recentBox" class="card" hidden>
+    <div class="eyebrow">Recent</div>
+    <ul id="recent" class="recent"></ul>
+  </section>
+</main>
+
+<footer class="foot">
+  <span class="muted">Never invents a fact. Check every line before you send it.</span>
+</footer>
+<script type="module" src="panel.js"></script>
+</body>
+</html>
