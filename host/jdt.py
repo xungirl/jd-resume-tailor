@@ -14,6 +14,8 @@ Python 3.9+, standard library only.
 """
 import base64
 import concurrent.futures
+import difflib
+import fcntl
 import hashlib
 import json
 import os
@@ -124,19 +126,82 @@ def reading_dirs(cfg) -> list:
     tc = tailor_config_path(cfg)
     if tc.exists():
         dirs.append(tc.parent)
-        # paths on the tracker's line are left out: the writer has no business there
-        text = '\n'.join(l for l in tc.read_text().splitlines() if not re.search(r'track|notion|obsidian|spreadsheet|投递', l, re.I))
-        for m in re.findall(r'(~/[^\s`\'")\]]+|/Users/[^\s`\'")\]]+|/home/[^\s`\'")\]]+)', text):
-            p = Path(m.rstrip('.,;:')).expanduser()
+        for p in _config_paths(cfg):
             d = p if p.is_dir() else p.parent
-            # not your home folder itself, and never agent settings or memory (~/.claude, ~/.codex, ...)
-            if d.exists() and d != Path.home() and not any(part.startswith('.') and part not in ('.config',) for part in d.relative_to(Path.home()).parts if d.is_relative_to(Path.home())):
+            if d.exists() and d != Path.home():
                 dirs.append(d)
     out = []
     for d in dirs:
         if d.exists() and d not in out:
             out.append(d)
     return out
+
+
+def _config_paths(cfg) -> list:
+    tc = tailor_config_path(cfg)
+    if not tc.exists():
+        return []
+    text = '\n'.join(l for l in tc.read_text().splitlines() if not re.search(r'track|notion|obsidian|spreadsheet|投递', l, re.I))
+    out = []
+    for m in re.findall(r'(~/[^\s`\'")\]]+|(?<![\w:/.])/[\w.~-][^\s`\'")\]]*)', text):  # not URLs
+        p = Path(m.rstrip('.,;:')).expanduser()
+        try:
+            rel = p.relative_to(Path.home())
+            if any(part.startswith('.') and part != '.config' for part in rel.parts):
+                continue  # never agent settings or memory
+        except ValueError:
+            pass
+        out.append(p)
+    return out
+
+
+def bank_files(cfg) -> list:
+    """The files your jd-resume-tailor config names (bullet bank, build script): backed up before every writer run."""
+    out = []
+    for p in _config_paths(cfg):
+        if p.is_file() and p.suffix in ('.py', '.toml', '.md', '.json', '.yaml', '.yml', '.tex') and p.stat().st_size < 4_000_000 and p not in out:
+            out.append(p)
+    return out
+
+
+def snapshot_bank(job, cfg):
+    """Copy the bank files into the job folder once per run, before the writer touches them."""
+    d = job.d / 'bank_backup'
+    if d.exists():
+        shutil.rmtree(d)
+    d.mkdir()
+    index = []
+    for i, f in enumerate(bank_files(cfg)):
+        dst = d / f'{i}_{f.name}'
+        shutil.copy2(f, dst)
+        index.append({'src': str(f), 'copy': dst.name})
+    write_json(d / 'index.json', index)
+    return index
+
+
+def bank_diff(job) -> str:
+    """What the writer changed in your bank files during this run, as a unified diff."""
+    d = job.d / 'bank_backup'
+    out = []
+    for e in read_json(d / 'index.json', []) or []:
+        src, old = Path(e['src']), d / e['copy']
+        new = src.read_text(errors='replace').splitlines(keepends=True) if src.exists() else []
+        out += difflib.unified_diff(old.read_text(errors='replace').splitlines(keepends=True), new,
+                                    fromfile=f'{src} (before this run)', tofile=str(src))
+    return ''.join(out)
+
+
+def restore_bank(job) -> list:
+    """Put the bank files back as they were before this run (the current versions are kept next to the backup)."""
+    d = job.d / 'bank_backup'
+    done = []
+    for e in read_json(d / 'index.json', []) or []:
+        src = Path(e['src'])
+        if src.exists():
+            shutil.copy2(src, d / f'replaced_{time.strftime("%H%M%S")}_{e["copy"]}')
+        shutil.copy2(d / e['copy'], src)
+        done.append(str(src))
+    return done
 
 
 # ---------------------------------------------------------------- your projects
@@ -322,8 +387,18 @@ def build_command(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, 
             cmd += ['--permission-mode', 'acceptEdits']
         for d in dirs:
             cmd += ['--add-dir', d]
+        deny = []
+        if writing:
+            # The JD comes from a web page. Even if one hides instructions, the writer can't reach the network
+            # through the usual tools or read keys and credentials.
+            deny += ['WebFetch', 'WebSearch', *[f'Bash({c}:*)' for c in
+                    ('curl', 'wget', 'nc', 'ncat', 'ssh', 'scp', 'sftp', 'rsync', 'ftp', 'telnet', 'open', 'osascript', 'security')],
+                    *[f'Read({p})' for p in ('~/.ssh/**', '~/.aws/**', '~/.gnupg/**', '~/.config/gcloud/**', '~/.netrc',
+                                              '~/.claude.json', '~/.codex/**', '~/.grok/**', '**/.env', '**/.env.*')]]
         if repos:  # your project repos are evidence to read, never to change
-            cmd += ['--disallowedTools', *[f'{t}(/{r}/**)' for r in repos for t in ('Edit', 'Write')]]
+            deny += [f'{t}(/{r}/**)' for r in repos for t in ('Edit', 'Write')]
+        if deny:
+            cmd += ['--disallowedTools', *deny]
         if session:
             cmd += ['--resume', session]
         model = model_for(agent, writing, cfg)
@@ -654,7 +729,22 @@ def write_run(job: Job, cfg: dict, prompt: str, key: str, label: str) -> dict:
     # Claude Code and Grok continue the same session, so the writer remembers why it chose what it chose.
     session = st.get('session') if key != 'write' and st['writer'] in ('claude', 'deepseek', 'grok') else None
     before = read_json(job.d / 'writer.json', {}) or {}
-    res = run_agent(st['writer'], prompt, job.d, True, cfg, job.d / 'agent.log', session, on_activity=job.activity(key))
+    # One writer at a time: two jobs editing the same bank file would overwrite each other.
+    lockf = open(home() / 'writer.lock', 'w')
+    try:
+        fcntl.flock(lockf, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        job.stage(key, label, 'running', 'waiting for another job to finish writing')
+        fcntl.flock(lockf, fcntl.LOCK_EX)
+        job.stage(key, label, 'running', st['writer'])
+    try:
+        res = run_agent(st['writer'], prompt, job.d, True, cfg, job.d / 'agent.log', session, on_activity=job.activity(key))
+    finally:
+        fcntl.flock(lockf, fcntl.LOCK_UN)
+        lockf.close()
+    diff = bank_diff(job)
+    (job.d / 'bank_changes.diff').write_text(diff)
+    st['bank_changed'] = bool(diff)
     if res['session']:
         st['session'] = res['session']
     st['cost'] = (st.get('cost') or 0) + (res['cost'] or 0)
@@ -730,6 +820,7 @@ def flow(job: Job, cfg: dict):
     job.save()
     job.plan([('write', 'Analysis and first draft'), ('check', 'Script checks'), ('hm1', 'Hiring manager review 1'),
               ('ats1', 'ATS review 1'), ('revise1', 'Revise after round 1'), ('gate', 'Gate')])
+    snapshot_bank(job, cfg)
     answers = (job.d / 'my_answers.md').read_text() if (job.d / 'my_answers.md').exists() else ''
     if answers:
         answers = '\nMy answers to your earlier questions (they decide what you asked):\n' + answers + '\n'
@@ -812,7 +903,8 @@ def view(d: Path) -> dict:
     out = {k: st.get(k) for k in ('id', 'url', 'company', 'title', 'writer', 'reviewer', 'writer_model', 'reviewer_model', 'mode', 'status', 'stage', 'stages',
                                   'created', 'updated', 'started', 'finished', 'error', 'cost', 'result')}
     out['folder'] = str(d)
-    out['has_pdf'] = (d / 'resume.pdf').exists()  # the first draft can be opened before the reviews finish
+    out['has_pdf'] = (d / 'resume.pdf').exists()
+    out['bank_changed'] = bool(st.get('bank_changed'))  # the first draft can be opened before the reviews finish
     out['now'] = time.time()
     return out
 
@@ -902,6 +994,16 @@ def handle(msg: dict) -> dict:
         write_json(d / 'state.json', st)
         spawn_worker(d.name)
         return {'ok': True, 'job': view(d)}
+    if cmd == 'restore_bank':  # undo what this job's writer changed in your bank
+        d = job_path(msg.get('id', ''))
+        st = read_json(d / 'state.json', {}) or {}
+        if st.get('status') in ('running', 'queued') and alive(st.get('pid')):
+            return {'ok': False, 'error': 'stop the run first'}
+        files = restore_bank(Job(d))
+        st['bank_changed'] = False
+        write_json(d / 'state.json', st)
+        (d / 'bank_changes.diff').write_text('')
+        return {'ok': True, 'restored': files}
     if cmd == 'reset':  # stop it and move the job aside, so this posting can start fresh
         d = job_path(msg.get('id', ''))
         st = read_json(d / 'state.json', {}) or {}
@@ -940,9 +1042,9 @@ def handle(msg: dict) -> dict:
     if cmd == 'review':  # read one review or the analysis, for the panel
         d = job_path(msg.get('id', ''))
         name = msg.get('name', '')
-        if not re.fullmatch(r'(review_(hm|ats)_\d|analysis|notes)', name):
+        if not re.fullmatch(r'(review_(hm|ats)_\d|analysis|notes|bank_changes)', name):
             return {'ok': False, 'error': 'bad name'}
-        p = d / f'{name}.md'
+        p = d / (f'{name}.diff' if name == 'bank_changes' else f'{name}.md')
         return {'ok': True, 'text': p.read_text()[:60000] if p.exists() else ''}
     return {'ok': False, 'error': f'unknown command {cmd!r}'}
 

@@ -331,6 +331,7 @@ function showJob(j) {
       const m = s.key.match(/^(hm|ats)(\d)$/);
       if (m && s.status !== 'todo') files.push([`review_${m[1]}_${m[2]}`, `${m[1].toUpperCase()} ${m[2]}: ${s.detail || '…'}`]);
     }
+    if (j.bank_changed) files.push(['bank_changes', 'Bank changes']);
     for (const [file, label] of files) {
       const btn = el('button', label, 'small');
       btn.onclick = async () => {
@@ -342,6 +343,17 @@ function showJob(j) {
         t.hidden = false;
       };
       rv.appendChild(btn);
+    }
+    if (j.bank_changed && !ACTIVE.has(j.status)) {
+      const undo = el('button', 'Undo bank changes', 'small');
+      undo.title = 'Put your bullet bank back as it was before this run';
+      undo.onclick = async () => {
+        if (!confirm('Put your bullet bank back as it was before this run? The current version is kept as a backup.')) return;
+        const res = await native({ cmd: 'restore_bank', id: j.id });
+        if (!res.ok) return note(res.error, 'red');
+        refreshJob();
+      };
+      rv.appendChild(undo);
     }
   }
   const qs = r?.questions || [];

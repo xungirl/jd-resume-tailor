@@ -10,6 +10,7 @@ my_answers.md exists.
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -39,6 +40,17 @@ if role.startswith('ROLE: writer'):
                                                      'summary': 'Stopped: clearance required.'}))
         print(json.dumps({'result': 'stopped', 'session_id': 'sess-1', 'total_cost_usd': 0.01}))
         sys.exit(0)
+    log = Path(os.environ.get('JD_TAILOR_HOME', '/tmp')) / 'writes.log'
+    with open(log, 'a') as f:
+        f.write(f'start {cwd.name} {time.time()}\n')
+    time.sleep(float(os.environ.get('FAKE_SLEEP', '0')))
+    cfgp = os.environ.get('JD_RESUME_TAILOR_CONFIG')
+    if cfgp and Path(cfgp).exists() and 'revision' not in role:  # like the skill: add a variant to the bank
+        import re
+        m = re.search(r'(/\S+\.toml)', Path(cfgp).read_text())
+        if m and Path(m.group(1)).exists():
+            with open(m.group(1), 'a') as f:
+                f.write(f'\n[variants.{cwd.name[:12]}]\nprojects = ["trailmap"]\n')
     (cwd / 'analysis.md').write_text(ANALYSIS)
     make_pdf(cwd / 'resume.pdf', RESUME_LINES)
     (cwd / 'resume_source.md').write_text('\n'.join(RESUME_LINES))
@@ -52,6 +64,8 @@ if role.startswith('ROLE: writer'):
         'new_from_projects': (json.loads((cwd / 'writer.json').read_text()).get('new_from_projects', []) if 'revision' in role and (cwd / 'writer.json').exists() else [{'project': 'telemetry-etl', 'bullet': 'Built a Beam pipeline for flight telemetry',
                                 'source': 'README.md'}] if './projects.md' in prompt and (cwd / 'projects.md').exists() else []),
         'summary': ('Revised: ' if 'revision' in role else '') + 'Backend resume led by Trailmap.'}))
+    with open(log, 'a') as f:
+        f.write(f'end {cwd.name} {time.time()}\n')
     with open(cwd / 'calls.log', 'a') as f:
         f.write(role + ' | session=' + os.environ.get('FAKE_SESSION', '') + '\n')
     print(json.dumps({'result': 'built', 'session_id': 'sess-1', 'total_cost_usd': 0.05}))

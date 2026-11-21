@@ -177,7 +177,11 @@ class Projects(unittest.TestCase):
         cmd, _ = jdt.build_command('claude', 'hi', TMP, True, cfg)
         self.assertIn('/tmp/proj a', cmd[cmd.index('--add-dir'):])
         dis = cmd[cmd.index('--disallowedTools') + 1:]
-        self.assertEqual(dis[:2], ['Edit(//tmp/proj a/**)', 'Write(//tmp/proj a/**)'])
+        self.assertIn('Edit(//tmp/proj a/**)', dis)
+        self.assertIn('Write(//tmp/proj a/**)', dis)
+        self.assertIn('Bash(curl:*)', dis)
+        self.assertIn('Read(~/.ssh/**)', dis)
+        self.assertEqual(cmd.count('--disallowedTools'), 1)
         cmd, _ = jdt.build_command('claude', 'hi', TMP, False, cfg)
         self.assertNotIn('/tmp/proj a', cmd)  # reviewers never see your repos
 
@@ -250,6 +254,54 @@ class Flow(unittest.TestCase):
         self.assertFalse(Path(j['folder']).exists())
         self.assertTrue(any(p.name.startswith(j['id']) for p in (jdt.home() / 'trash').iterdir()))
         self.assertIsNone(jdt.handle({'cmd': 'find', 'url': 'https://example.com/jobs/4'})['job'])
+
+    def test_bank_backup_diff_and_restore(self):
+        d = Path(tempfile.mkdtemp(dir=TMP))
+        bank = d / 'resume.toml'
+        bank.write_text('[profile]\nname = "Alex Rivera"\n')
+        conf = d / 'config.md'
+        conf.write_text(f'- Bullet bank: {bank}\n- Tracker: {d}/tracker.toml (do not touch)\n')
+        (d / 'tracker.toml').write_text('x=1')
+        jdt.save_config({'mode': 'quick', 'tailor_config': str(conf), 'agents': {'claude': {'command': FAKE}, 'codex': {'command': FAKE}}})
+        try:
+            self.assertEqual(jdt.bank_files(jdt.load_config()), [bank])  # the tracker's line is left out
+            r = jdt.handle({'cmd': 'tailor', 'job': {'url': 'https://example.com/jobs/5', 'company': 'Bank Co', 'title': 'Intern', 'text': JD_TEXT}})
+            j = wait(r['id'])
+        finally:
+            jdt.save_config({'tailor_config': str(TMP / 'no-config.md')})
+        self.assertTrue(j['bank_changed'])
+        diff = jdt.handle({'cmd': 'review', 'id': j['id'], 'name': 'bank_changes'})['text']
+        self.assertIn('+[variants.', diff)
+        self.assertIn('(before this run)', diff)
+        self.assertIn('[variants.', bank.read_text())
+        r = jdt.handle({'cmd': 'restore_bank', 'id': j['id']})
+        self.assertEqual(r['restored'], [str(bank)])
+        self.assertEqual(bank.read_text(), '[profile]\nname = "Alex Rivera"\n')
+        self.assertFalse(jdt.handle({'cmd': 'status', 'id': j['id']})['job']['bank_changed'])
+
+    def test_one_writer_at_a_time(self):
+        os.environ['FAKE_SLEEP'] = '1.0'
+        log = jdt.home() / 'writes.log'
+        log.unlink(missing_ok=True)
+        try:
+            ids = [jdt.handle({'cmd': 'tailor', 'job': {'url': f'https://example.com/jobs/lock{i}', 'company': f'Lock{i}',
+                                                        'title': 'Intern', 'text': JD_TEXT}})['id'] for i in range(2)]
+            for i in ids:
+                wait(i, timeout=90)
+        finally:
+            del os.environ['FAKE_SLEEP']
+        spans, open_ = [], {}
+        for line in log.read_text().split('\n'):
+            if line:
+                kind, name, t = line.split()
+                if kind == 'start':
+                    open_[name] = float(t)
+                else:
+                    spans.append((open_.pop(name), float(t)))
+        spans.sort()
+        self.assertGreaterEqual(len(spans), 4)  # each job: first draft + revision
+        for (a0, a1), (b0, b1) in zip(spans, spans[1:]):
+            self.assertLessEqual(a1, b0 + 0.05, f'two writers overlapped: {spans}')
 
     def test_question_then_answer(self):
         r = jdt.handle({'cmd': 'tailor', 'job': {'url': 'https://example.com/jobs/2', 'company': 'Gov Co', 'title': 'Intern',
