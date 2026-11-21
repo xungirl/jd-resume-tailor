@@ -4,6 +4,8 @@
 #   * every bullet is something you can defend in an interview, with a number you measured
 #   * bullets have short keys so a variant can pick them: projects = [{key="kv", bullets=["core","chaos"]}]
 #   * write MORE bullets than fit on a page; variants choose, the bank never lies
+#   * optional `tags` after a project title: 2-3 core words (main language + the capability), e.g. "Go · Raft Consensus";
+#     a variant can re-pick them for one JD with  tags = { kv = "Go · Distributed Storage" }
 
 [profile]
 name = "Alex Rivera"
@@ -55,7 +57,8 @@ text = "JUnit 5, pytest, Go race detector, fault injection, load testing (p50/p9
 # ------------------------------------------------------------------ projects: bullet bank
 [projects.kv]
 name = "tinykv"
-desc = "Raft-Replicated Key-Value Store in Go"
+desc = "Raft-Replicated Key-Value Store"
+tags = "Go · Raft Consensus"
 url = "https://github.com/example/tinykv"
 dates = "Oct 2026"
 [projects.kv.bullets]
@@ -65,7 +68,8 @@ perf = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> (1 to 64 client
 
 [projects.gateway]
 name = "throttle"
-desc = "Rate-Limiting API Gateway in Go"
+desc = "Rate-Limiting API Gateway"
+tags = "Go · Redis · Rate Limiting"
 url = "https://github.com/example/throttle"
 [projects.gateway.bullets]
 algo = "Implemented <b>4 rate-limiting algorithms</b> (token bucket, fixed window, sliding log, sliding counter) behind one interface with in-memory and Redis backends."
@@ -73,7 +77,8 @@ redis = "Used <b>atomic Redis Lua scripts</b> so 3 gateway instances enforced a 
 
 [projects.shop]
 name = "Shopline"
-desc = "E-Commerce Backend (Spring Boot, PostgreSQL, AWS)"
+desc = "E-Commerce Backend"
+tags = "Java · Spring Boot · AWS"
 url = "https://github.com/example/shopline"
 [projects.shop.bullets]
 api = "Designed <b>25 REST endpoints</b> and a normalized PostgreSQL schema for carts, orders and inventory with optimistic locking."
@@ -82,7 +87,8 @@ aws = "Deployed with Docker on <b>AWS ECS Fargate</b> behind an ALB with RDS Pos
 
 [projects.rag]
 name = "DocQA"
-desc = "Retrieval-Augmented Q&amp;A over Support Tickets"
+desc = "Q&amp;A over Support Tickets"
+tags = "Python · RAG · Retrieval Evaluation"
 url = "https://github.com/example/docqa"
 [projects.rag.bullets]
 eval = "Benchmarked <b>12 retrieval configurations</b> on a 60-query test set, raising <b>Recall@5 from 65% to 95%</b> with hybrid BM25 + vector search."
@@ -108,6 +114,7 @@ projects = [
 
 [variants.infra]              # storage / distributed systems / infra, Go shops
 availability = true           # JD asked for start/end dates
+tags = { kv = "Go · Raft · Distributed Storage" }   # re-picked for this JD family
 skills = ["lang_go", "dist", "cloud", "test", "backend"]
 projects = [
   { key = "kv", bullets = ["core", "chaos", "perf"] },

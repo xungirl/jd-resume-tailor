@@ -44,6 +44,7 @@ Report constraint conflicts plainly (e.g. "JD says 2 semesters left after the in
 - Score each project in the bank by how directly it demonstrates the "what the team builds" sentence, then must-haves, then nice-to-haves. The best match leads, with the most bullets.
 - Reorder the **Languages** line so the JD's language comes first; pick skill groups whose keywords appear in the JD; keep every skill line to **one line**.
 - Drop projects that are impressive but off-topic for this team (they cost space and dilute the story).
+- **Header tags** (the italic words after each project title, `tags` in the bank): re-pick them for this JD and put them in the variant's `tags = { key = "..." }`. Use **2-3 tags**: the project's main language, then the core capability in the JD's own words (e.g. `C++20 · Query Engine · Concurrency` for a database team, `Go · Kubernetes · Container Security` for a security team). No benchmarks, test frameworks or wire protocols as tags (`TPC-H`, `JUnit`, `TCP`): they describe how it was checked, not what it is. A tag must be something the repo really is or uses; the title line must not wrap.
 - Mention a strong but non-obvious hook if there is one (e.g. the user's degree matches the company's domain) for the form's "why us" question, not for the resume.
 
 ### Truth rules (non-negotiable)

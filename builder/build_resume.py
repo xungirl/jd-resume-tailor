@@ -145,7 +145,13 @@ def build(data, name, spec, outdir):
     for p in spec['projects']:
         proj = data['projects'][p['key']]
         y[0] -= 2.5
-        head = f"<b>{proj['name']}</b> | <i>{proj['desc']}</i>" + (' | ' + link(proj['url'], proj.get('url_label', 'GitHub')) if proj.get('url') else '')
+        # tags: 2-3 core words after the title ("Go · Raft Consensus"); a variant can re-pick them per JD
+        tags = spec.get('tags', {}).get(p['key'], proj.get('tags'))
+        if tags:
+            head = f"<b>{proj['name']}: {proj['desc']}</b> | <i>{tags}</i>"
+        else:
+            head = f"<b>{proj['name']}</b> | <i>{proj['desc']}</i>"
+        head += ' | ' + link(proj['url'], proj.get('url_label', 'GitHub')) if proj.get('url') else ''
         row(head, proj.get('dates', '') if spec.get('project_dates') else '', gap=1)
         for b in p['bullets']:
             if b not in proj['bullets']:
