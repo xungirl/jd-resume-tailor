@@ -72,6 +72,19 @@ function renderAgents() {
   };
   fill($('writer'), H.writer, false);
   fill($('reviewer'), H.reviewer, true);
+  const models = (sel, custom, agentId, value) => {
+    const a = H.agents.find((x) => x.id === agentId) || { models: [] };
+    sel.innerHTML = '';
+    for (const [id, label] of a.models) sel.add(new Option(label, id));
+    sel.add(new Option('Other model…', '__custom'));
+    const known = a.models.some(([id]) => id === value);
+    sel.value = known ? value : value ? '__custom' : a.models[0][0];
+    custom.hidden = sel.value !== '__custom';
+    if (!known && value) custom.value = value;
+  };
+  models($('writerModel'), $('writerCustom'), H.writer, H.writer_model);
+  models($('reviewerModel'), $('reviewerCustom'), H.reviewer === 'same' ? H.writer : H.reviewer, H.reviewer_model);
+  $('mode').value = H.mode || 'quick';
   $('dsBox').hidden = !H.agents.find((a) => a.id === 'deepseek' && a.found);
   const warn = [];
   if (!H.skill) warn.push('The jd-resume-tailor skill is not installed. Get it at github.com/xungirl/jd-resume-tailor.');
@@ -81,17 +94,29 @@ function renderAgents() {
   $('envWarn').textContent = warn.join(' ');
   const rv = $('reviewer').value === 'same' ? H.writer : $('reviewer').value;
   const name = (id) => (H.agents.find((a) => a.id === id) || {}).name || id;
-  $('who').textContent = `Writer: ${name(H.writer)} · Reviewers: ${name(rv)}`;
+  const mlabel = (agentId, v) => { const a = H.agents.find((x) => x.id === agentId); const m = a && a.models.find(([id]) => id === (v || a.models[0][0])); return m ? m[1].replace(/ \(.*\)/, '') : v; };
+  $('who').textContent = `Writer: ${name(H.writer)} ${mlabel(H.writer, H.writer_model) || ''} · Reviewers: ${name(rv)} ${mlabel(rv, H.reviewer_model) || ''} · ${H.mode === 'thorough' ? 'thorough' : 'quick'}`.replace(/ +·/g, ' ·');
 }
 
 async function saveSettings(patch) {
   const r = await native({ cmd: 'settings', set: patch });
-  if (r.ok) { H.writer = r.writer; H.reviewer = r.reviewer; H.agents = r.agents; renderAgents(); await hello(); }
+  if (r.ok) await hello();
+  else note(r.error, 'red');
   return r;
 }
 
 $('writer').onchange = () => saveSettings({ writer: $('writer').value });
 $('reviewer').onchange = () => saveSettings({ reviewer: $('reviewer').value });
+$('mode').onchange = () => saveSettings({ mode: $('mode').value });
+for (const role of ['writer', 'reviewer']) {
+  const sel = $(role + 'Model'), custom = $(role + 'Custom');
+  sel.onchange = () => {
+    custom.hidden = sel.value !== '__custom';
+    if (sel.value !== '__custom') saveSettings({ [role + '_model']: sel.value });
+    else custom.focus();
+  };
+  custom.onchange = () => saveSettings({ [role + '_model']: custom.value.trim() });
+}
 $('saveDs').onclick = async () => {
   const k = $('dsKey').value.trim();
   if (!k) return;
@@ -260,12 +285,16 @@ function showJob(j) {
 
   const tl = $('timeline');
   tl.innerHTML = '';
+  const dur = (sec) => sec >= 60 ? `${Math.floor(sec / 60)}m ${String(Math.round(sec % 60)).padStart(2, '0')}s` : `${Math.round(sec)}s`;
   for (const s of j.stages || []) {
     const li = el('li', s.label, s.status);
+    if (s.seconds != null) li.prepend(el('span', dur(s.seconds), 't'));
+    else if (s.status === 'running' && s.started && j.now) li.prepend(el('span', dur(j.now - s.started), 't'));
     if (s.detail) li.appendChild(el('span', s.detail, 'd'));
     tl.appendChild(li);
   }
-  const meta = [`writer ${name(j.writer)}`, `reviewers ${name(j.reviewer)}`];
+  const meta = [`writer ${name(j.writer)}${j.writer_model ? ' ' + j.writer_model : ''}`, `reviewers ${name(j.reviewer)}${j.reviewer_model ? ' ' + j.reviewer_model : ''}`];
+  if (j.mode) meta.push(j.mode);
   if (j.cost) meta.push(`$${(+j.cost).toFixed(2)} in agent usage`);
   if (j.started && j.finished) meta.push(`${Math.round((new Date(j.finished) - new Date(j.started)) / 60000)} min`);
   $('jobMeta').textContent = meta.join(' · ');
@@ -313,9 +342,10 @@ function showJob(j) {
   ql.innerHTML = '';
   for (const q of qs) ql.appendChild(el('li', q));
 
-  const hasPdf = !!(r && r.pdf);
+  const hasPdf = !!((r && r.pdf) || j.has_pdf);
   $('openPdf').hidden = !hasPdf;
-  $('downloadPdf').hidden = !hasPdf;
+  $('openPdf').textContent = ACTIVE.has(j.status) ? 'Open draft' : 'Open PDF';
+  $('downloadPdf').hidden = !hasPdf || ACTIVE.has(j.status);
   $('reveal').hidden = !(r || j.status === 'failed');
   $('cancel').hidden = !ACTIVE.has(j.status);
 

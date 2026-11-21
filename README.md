@@ -74,6 +74,11 @@ writer (your bank) ──> analysis.md + resume.pdf ──> script checks ──
 - **Reviewers.** Each runs as a fresh process, in a folder that holds only what it may see. The isolation comes from the filesystem, not from a prompt asking it not to look.
   - The HM reviewer gets `jd.md`, `resume.pdf` and its text.
   - The ATS reviewer gets the same plus the writer's `resume_source.md`, two text extractions, and the PDF's link targets.
+- **Models.** You pick the model for the writer and for the reviewers. The default is the agent's best: Opus for Claude Code, V4 Pro for DeepSeek. Codex and Grok use their own defaults unless you name a model.
+- **Quick or thorough.**
+  - Quick (the default) runs one round of reviews and one revision.
+  - Thorough runs the full flow's rounds, described next.
+  - The panel shows what the agent is doing right now (from Claude Code's live event stream) and how long each step took. You can open the first draft before the reviews finish.
 - **Rounds.**
   - HM round 2 runs if round 1 wasn't a "yes", or if the revision touched a hard-requirement bullet or 3+ bullets.
   - ATS round 2 runs only if round 1 failed.

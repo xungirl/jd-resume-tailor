@@ -103,6 +103,25 @@ class Host(unittest.TestCase):
         self.assertFalse(jdt.handle({'cmd': 'review', 'id': 'x', 'name': '../config'})['ok'])
         self.assertFalse(jdt.handle({'cmd': 'tailor', 'job': {'text': 'short'}})['ok'])
 
+    def test_activity_names(self):
+        ev = lambda name, inp: {'type': 'assistant', 'message': {'content': [{'type': 'tool_use', 'name': name, 'input': inp}]}}
+        self.assertEqual(jdt.activity(ev('Bash', {'command': 'pdftoppm -r 110 x.pdf', 'description': 'Render the page'})), 'Running: Render the page')
+        self.assertEqual(jdt.activity(ev('Read', {'file_path': '/Users/a/resume/resume.toml'})), 'Reading resume.toml')
+        self.assertIsNone(jdt.activity({'type': 'user'}))
+        cfg = dict(jdt.DEFAULTS)
+        cmd, _ = jdt.build_command('claude', 'hi', TMP, False, cfg, stream=True)
+        self.assertEqual(cmd[cmd.index('--model') + 1], 'opus')  # the best model unless you pick another
+        self.assertIn('stream-json', cmd)
+        cmd, _ = jdt.build_command('claude', 'hi', TMP, True, dict(cfg, writer_model='sonnet', reviewer_model='haiku'))
+        self.assertEqual(cmd[cmd.index('--model') + 1], 'sonnet')
+        cmd, _ = jdt.build_command('claude', 'hi', TMP, False, dict(cfg, writer_model='sonnet', reviewer_model='haiku'))
+        self.assertEqual(cmd[cmd.index('--model') + 1], 'haiku')
+        _, env = jdt.build_command('deepseek', 'hi', TMP, False, dict(cfg, deepseek_key='k', reviewer_model='deepseek-flash'))
+        self.assertEqual(env['ANTHROPIC_MODEL'], 'deepseek-flash')
+        cmd, _ = jdt.build_command('codex', 'hi', TMP, True, cfg)
+        self.assertNotIn('-m', cmd)  # Codex picks its own default
+        self.assertFalse(jdt.handle({'cmd': 'settings', 'set': {'writer_model': 'opus; rm -rf ~'}})['ok'])
+
     def test_commands(self):
         cfg = dict(jdt.DEFAULTS, deepseek_key='sk-test')
         os.environ['ANTHROPIC_API_KEY'] = 'should-not-leak'
@@ -126,6 +145,9 @@ class Host(unittest.TestCase):
 
 
 class Flow(unittest.TestCase):
+    def setUp(self):
+        jdt.save_config({'mode': 'thorough', 'agents': {'claude': {'command': FAKE}, 'codex': {'command': FAKE}}})
+
     def test_full_flow_with_blind_reviewers(self):
         r = jdt.handle({'cmd': 'tailor', 'job': {'url': 'https://example.com/jobs/1', 'company': 'Acme Robotics',
                                                  'title': 'Software Engineer Intern', 'text': JD_TEXT}})
@@ -155,6 +177,21 @@ class Flow(unittest.TestCase):
         self.assertTrue(jdt.handle({'cmd': 'pdf', 'id': j['id']})['b64'].startswith('JVBERi0'))
         self.assertIn('Direction: backend', jdt.handle({'cmd': 'review', 'id': j['id'], 'name': 'analysis'})['text'])
         self.assertIn(j['id'], [x['id'] for x in jdt.handle({'cmd': 'list'})['jobs']])
+
+    def test_quick_mode_one_round_and_streamed_activity(self):
+        jdt.save_config({'mode': 'quick', 'agents': {'claude': {'command': FAKE + ['stream'], 'stream': True},
+                                                     'codex': {'command': FAKE}}})
+        r = jdt.handle({'cmd': 'tailor', 'job': {'url': 'https://example.com/jobs/3', 'company': 'Quick Co',
+                                                 'title': 'Intern', 'text': JD_TEXT}})
+        j = wait(r['id'])
+        keys = [s['key'] for s in j['stages']]
+        self.assertEqual(keys, ['write', 'check', 'hm1', 'ats1', 'revise1', 'check1', 'gate'])
+        self.assertEqual(j['status'], 'ready')  # the gate passes an "unsure" HM (only "no" fails it), per the flow
+        self.assertEqual(j['result']['hm'], 'unsure')
+        self.assertTrue(all('seconds' in s for s in j['stages'] if s['key'] != 'gate'), j['stages'])
+        self.assertEqual((j['writer_model'], j['reviewer_model'], j['mode']), ('opus', '', 'quick'))
+        self.assertEqual(j['cost'], 0.05 * 2 + 0.02 * 2)  # cost read from the stream's result event
+        self.assertTrue(j['has_pdf'])
 
     def test_question_then_answer(self):
         r = jdt.handle({'cmd': 'tailor', 'job': {'url': 'https://example.com/jobs/2', 'company': 'Gov Co', 'title': 'Intern',

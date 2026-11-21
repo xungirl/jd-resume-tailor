@@ -23,6 +23,7 @@ import signal
 import struct
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -39,21 +40,33 @@ import check as checks  # noqa: E402
 DEFAULTS = {
     'writer': 'claude',
     'reviewer': 'same',
+    'mode': 'quick',           # quick: one review round; thorough: up to three, as the flow describes
+    'writer_model': '',        # '' = the agent's best (Claude: opus)
+    'reviewer_model': '',
     'max_budget_usd': 4,       # per agent run (Claude Code only)
     'timeout_minutes': 25,     # per agent run
     'extra_dirs': [],          # more folders the writer may read (your bank and build script are found from the skill config)
     'tailor_config': '',       # use this jd-resume-tailor config instead of the default (tests use a made-up person)
     'deepseek_key': '',
-    'deepseek_model': 'deepseek-v4-pro',
     'agents': {},              # per-agent overrides, e.g. {"grok": {"model": "grok-4.6"}} or a full {"command": [...]}
 }
 
 AGENTS = {
-    'claude': {'name': 'Claude Code', 'bin': 'claude', 'login': 'Uses your Claude Code login.'},
-    'codex': {'name': 'Codex', 'bin': 'codex', 'login': 'Uses your Codex login.'},
-    'grok': {'name': 'Grok Build', 'bin': 'grok', 'login': 'Uses your Grok Build login (run "grok login" once).'},
-    'deepseek': {'name': 'DeepSeek (in Claude Code)', 'bin': 'claude', 'login': 'Needs your DeepSeek API key, once.'},
+    'claude': {'name': 'Claude Code', 'bin': 'claude', 'login': 'Uses your Claude Code login.',
+               'models': [['opus', 'Opus (best)'], ['sonnet', 'Sonnet (faster)'], ['haiku', 'Haiku (fastest)']]},
+    'codex': {'name': 'Codex', 'bin': 'codex', 'login': 'Uses your Codex login.',
+              'models': [['', "Codex's default"]]},
+    'grok': {'name': 'Grok Build', 'bin': 'grok', 'login': 'Uses your Grok Build login (run "grok login" once).',
+             'models': [['', "Grok's default"]]},
+    'deepseek': {'name': 'DeepSeek (in Claude Code)', 'bin': 'claude', 'login': 'Needs your DeepSeek API key, once.',
+                 'models': [['deepseek-v4-pro', 'V4 Pro (best)'], ['deepseek-flash', 'Flash (faster)']]},
 }
+
+
+def model_for(agent: str, writing: bool, cfg: dict) -> str:
+    """The model this role runs on: your choice, else the agent's best (the first in its list)."""
+    chosen = cfg.get('writer_model' if writing else 'reviewer_model') or ''
+    return chosen or cfg.get('agents', {}).get(agent, {}).get('model') or AGENTS[agent]['models'][0][0]
 
 
 # ---------------------------------------------------------------- config and paths
@@ -150,11 +163,11 @@ def agent_status(cfg=None) -> list:
                     'deepseek': 'Needs Claude Code installed (it runs DeepSeek inside Claude Code).'}[aid]
         if aid == 'deepseek' and found and not cfg.get('deepseek_key'):
             ready, note = False, 'Paste your DeepSeek API key once (platform.deepseek.com/api_keys).'
-        out.append({'id': aid, 'name': a['name'], 'found': found, 'ready': ready, 'note': note})
+        out.append({'id': aid, 'name': a['name'], 'found': found, 'ready': ready, 'note': note, 'models': a['models']})
     return out
 
 
-def build_command(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, session=None):
+def build_command(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, session=None, stream=False):
     """The command line and environment for one unattended run."""
     env = dict(os.environ)
     if cfg.get('tailor_config'):
@@ -166,21 +179,23 @@ def build_command(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, 
     dirs = [str(d) for d in reading_dirs(cfg)] if writing else []
     if agent in ('claude', 'deepseek'):
         tools = 'Bash Read Write Edit Glob Grep Skill' if writing else 'Read Glob Bash(pdftotext:*)'
-        cmd = ['claude', '-p', prompt, '--allowedTools', tools, '--output-format', 'json',
+        cmd = ['claude', '-p', prompt, '--allowedTools', tools,
                '--max-budget-usd', str(cfg.get('max_budget_usd', 4))]
+        cmd += ['--output-format', 'stream-json', '--verbose'] if stream else ['--output-format', 'json']
         if writing:
             cmd += ['--permission-mode', 'acceptEdits']
         for d in dirs:
             cmd += ['--add-dir', d]
         if session:
             cmd += ['--resume', session]
-        if over.get('model'):
-            cmd += ['--model', over['model']]
+        model = model_for(agent, writing, cfg)
+        if agent == 'claude' and model:
+            cmd += ['--model', model]
         if agent == 'deepseek':
             # DeepSeek's documented setup for Claude Code (api-docs.deepseek.com, "Integrate with Claude Code").
             for k in ('ANTHROPIC_API_KEY', 'CLAUDE_CODE_OAUTH_TOKEN'):
                 env.pop(k, None)
-            m = cfg.get('deepseek_model') or 'deepseek-v4-pro'
+            m = model or 'deepseek-v4-pro'
             env.update({'ANTHROPIC_BASE_URL': 'https://api.deepseek.com/anthropic',
                         'ANTHROPIC_AUTH_TOKEN': cfg.get('deepseek_key', ''),
                         'ANTHROPIC_MODEL': m, 'ANTHROPIC_DEFAULT_OPUS_MODEL': m, 'ANTHROPIC_DEFAULT_SONNET_MODEL': m,
@@ -194,46 +209,96 @@ def build_command(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, 
             cmd += ['-c', 'sandbox_workspace_write.network_access=true']
         for d in dirs:
             cmd += ['--add-dir', d]
-        if over.get('model'):
-            cmd += ['-m', over['model']]
+        if model_for(agent, writing, cfg):
+            cmd += ['-m', model_for(agent, writing, cfg)]
         return cmd + [prompt], env
     if agent == 'grok':
         cmd = ['grok', '--no-auto-update', '-p', prompt, '--cwd', str(cwd), '--output-format', 'json', '--always-approve']
         if session:
             cmd += ['--resume', session]
-        if over.get('model'):
-            cmd += ['-m', over['model']]
+        if model_for(agent, writing, cfg):
+            cmd += ['-m', model_for(agent, writing, cfg)]
         return cmd, env
     raise ValueError(f'unknown agent "{agent}"')
 
 
-def run_agent(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, log: Path, session=None) -> dict:
-    cmd, env = build_command(agent, prompt, cwd, writing, cfg, session)
+def activity(event: dict):
+    """A few words on what a Claude Code stream-json event is doing, or None."""
+    if event.get('type') != 'assistant':
+        return None
+    for b in (event.get('message') or {}).get('content') or []:
+        if b.get('type') != 'tool_use':
+            continue
+        name, inp = b.get('name', ''), b.get('input') or {}
+        if name == 'Bash':
+            c = inp.get('description') or inp.get('command', '')
+            return 'Running: ' + c.strip().splitlines()[0][:90] if c else 'Running a command'
+        if name in ('Read', 'Write', 'Edit'):
+            f = Path(inp.get('file_path', '')).name
+            return {'Read': 'Reading', 'Write': 'Writing', 'Edit': 'Editing'}[name] + (f' {f}' if f else '')
+        if name == 'Skill':
+            return 'Loading the jd-resume-tailor skill'
+        if name in ('Glob', 'Grep'):
+            return 'Looking through files'
+        return name
+    return None
+
+
+def run_agent(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, log: Path, session=None, on_activity=None) -> dict:
+    over = cfg.get('agents', {}).get(agent, {})
+    stream = agent in ('claude', 'deepseek') and not over.get('command') or bool(over.get('stream'))
+    cmd, env = build_command(agent, prompt, cwd, writing, cfg, session, stream)
     t0 = time.time()
+    timeout = int(cfg.get('timeout_minutes', 25)) * 60
+    final = None
     try:
-        p = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True,
-                           timeout=int(cfg.get('timeout_minutes', 25)) * 60)
-        out, err, code = p.stdout, p.stderr, p.returncode
-    except subprocess.TimeoutExpired as e:
-        out, err, code = (e.stdout or b'').decode() if isinstance(e.stdout, bytes) else (e.stdout or ''), 'timed out', -1
+        p = subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True, start_new_session=False)
+        killer = threading.Timer(timeout, p.kill)
+        killer.start()
+        err_chunks = []
+        t_err = threading.Thread(target=lambda: err_chunks.append(p.stderr.read()), daemon=True)
+        t_err.start()
+        lines, last_note = [], 0.0
+        for line in p.stdout:
+            lines.append(line)
+            if stream and line.startswith('{'):
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                if ev.get('type') == 'result':
+                    final = ev
+                note = activity(ev)
+                if note and on_activity and time.time() - last_note > 1.5:
+                    on_activity(note)
+                    last_note = time.time()
+        code = p.wait()
+        killer.cancel()
+        t_err.join(5)
+        out, err = ''.join(lines), ''.join(err_chunks)
+        if code < 0 and time.time() - t0 >= timeout - 1:
+            err = f'timed out after {timeout // 60} minutes\n' + err
     except OSError as e:
         out, err, code = '', str(e), -1
     with open(log, 'a') as f:
         f.write(f'\n===== {now()} {agent} {"write" if writing else "review"} in {cwd.name} (exit {code}, {time.time() - t0:.0f}s)\n')
-        f.write(out[-20000:])
+        f.write(out[-40000:])
         if err.strip():
             f.write('\n--- stderr\n' + err[-5000:])
     res = {'ok': code == 0, 'text': out, 'session': None, 'cost': None, 'error': '' if code == 0 else (err.strip() or out.strip())[-400:]}
-    try:
-        j = json.loads(out)
-        if isinstance(j, dict):
-            res['text'] = j.get('result') or j.get('text') or ''
-            res['session'] = j.get('session_id') or j.get('sessionId')
-            res['cost'] = j.get('total_cost_usd')
-            if j.get('is_error'):
-                res['ok'], res['error'] = False, str(j.get('result') or j.get('subtype') or 'agent error')[-400:]
-    except ValueError:
-        pass
+    j = final
+    if j is None:
+        try:
+            j = json.loads(out)
+        except ValueError:
+            j = None
+    if isinstance(j, dict):
+        res['text'] = j.get('result') or j.get('text') or ''
+        res['session'] = j.get('session_id') or j.get('sessionId')
+        res['cost'] = j.get('total_cost_usd')
+        if j.get('is_error'):
+            res['ok'], res['error'] = False, str(j.get('result') or j.get('subtype') or 'agent error')[-400:]
     last = cwd / '.last_message.txt'
     if last.exists():
         res['text'] = last.read_text()
@@ -277,23 +342,41 @@ class Job:
     def __init__(self, d: Path):
         self.d = d
         self.state = read_json(d / 'state.json', {})
+        self.lock = threading.RLock()  # the two reviewers report at the same time
 
     def save(self):
-        self.state['updated'] = now()
-        write_json(self.d / 'state.json', self.state)
+        with self.lock:
+            self.state['updated'] = now()
+            write_json(self.d / 'state.json', self.state)
 
     def stage(self, key, label, status='running', detail=''):
-        st = self.state.setdefault('stages', [])
-        for s in st:
-            if s['key'] == key:
-                s.update({'label': label, 'status': status, 'detail': detail})
-                break
-        else:  # a new stage goes before the ones still to do
-            at = next((i for i, s in enumerate(st) if s['status'] == 'todo'), len(st))
-            st.insert(at, {'key': key, 'label': label, 'status': status, 'detail': detail})
-        if status == 'running':
-            self.state['stage'] = key
-        self.save()
+        with self.lock:
+            st = self.state.setdefault('stages', [])
+            for s in st:
+                if s['key'] == key:
+                    break
+            else:  # a new stage goes before the ones still to do
+                at = next((i for i, x in enumerate(st) if x['status'] == 'todo'), len(st))
+                s = {'key': key}
+                st.insert(at, s)
+            if status == 'running' and s.get('status') != 'running':
+                s['started'] = time.time()
+            if status in ('done', 'failed') and s.get('started'):
+                s['seconds'] = round(time.time() - s['started'])
+            s.update({'label': label, 'status': status, 'detail': detail})
+            if status == 'running':
+                self.state['stage'] = key
+            self.save()
+
+    def activity(self, key):
+        """A callback that shows what the agent is doing under this stage."""
+        def note(text):
+            with self.lock:
+                for s in self.state.get('stages', []):
+                    if s['key'] == key and s['status'] == 'running':
+                        s['detail'] = text
+                        self.save()
+        return note
 
     def plan(self, keys_labels):
         """Show upcoming stages as gray dots."""
@@ -330,6 +413,8 @@ def create_job(job: dict, cfg: dict) -> str:
     write_json(d / 'state.json', {
         'id': jid, 'url': job.get('url', ''), 'company': job.get('company', ''), 'title': job.get('title', ''),
         'location': job.get('location', ''), 'writer': writer, 'reviewer': writer if reviewer == 'same' else reviewer,
+        'writer_model': model_for(writer, True, cfg), 'reviewer_model': model_for(writer if reviewer == 'same' else reviewer, False, cfg),
+        'mode': cfg.get('mode', 'quick'),
         'status': 'queued', 'stage': '', 'stages': [], 'created': old.get('created') or now(), 'updated': now(),
         'started': '', 'finished': '', 'error': '', 'session': None, 'cost': 0, 'pid': None,
     })
@@ -410,7 +495,7 @@ def review(job: Job, cfg: dict, kinds, rnd: int) -> dict:
     def one(kind):
         r = prepare_review(job, kind, rnd)
         prompt = fmt(f'{kind}.md', role=st.get('title') or 'this role', company=st.get('company') or 'the company')
-        res = run_agent(st['reviewer'], prompt, r, False, cfg, job.d / 'agent.log')
+        res = run_agent(st['reviewer'], prompt, r, False, cfg, job.d / 'agent.log', on_activity=job.activity(f'{kind}{rnd}'))
         (job.d / f'review_{kind}_{rnd}.md').write_text(res['text'] or res['error'])
         v = verdict(res['text'], ['yes', 'no', 'unsure'] if kind == 'hm' else ['pass', 'fail'])
         return kind, v, res
@@ -430,7 +515,7 @@ def write_run(job: Job, cfg: dict, prompt: str, key: str, label: str) -> dict:
     job.stage(key, label, 'running', st['writer'])
     # Claude Code and Grok continue the same session, so the writer remembers why it chose what it chose.
     session = st.get('session') if key != 'write' and st['writer'] in ('claude', 'deepseek', 'grok') else None
-    res = run_agent(st['writer'], prompt, job.d, True, cfg, job.d / 'agent.log', session)
+    res = run_agent(st['writer'], prompt, job.d, True, cfg, job.d / 'agent.log', session, on_activity=job.activity(key))
     if res['session']:
         st['session'] = res['session']
     st['cost'] = (st.get('cost') or 0) + (res['cost'] or 0)
@@ -512,13 +597,15 @@ def flow(job: Job, cfg: dict):
     info = revise(job, cfg, 1, last)['writer'] or info
     run_checks(job, 'check1', 'Script checks')
 
-    # Round 2: HM if round 1 wasn't a yes, or the revision touched a hard-requirement bullet or 3+ bullets.
-    # ATS only if round 1 failed. Round 3: HM only, only if round 2 said no; its notes are applied, not re-reviewed.
+    # Quick mode stops after round 1. Thorough mode, per the flow:
+    # round 2 HM if round 1 wasn't a yes, or the revision touched a hard-requirement bullet or 3+ bullets;
+    # round 2 ATS only if round 1 failed; round 3 HM only if round 2 said no (applied, not re-reviewed).
     kinds = []
-    if last['hm'] != 'yes' or info.get('touched_hard_requirement') or int(info.get('bullets_changed') or 0) >= 3:
-        kinds.append('hm')
-    if last['ats'] != 'pass':
-        kinds.append('ats')
+    if cfg.get('mode', 'quick') != 'quick':
+        if last['hm'] != 'yes' or info.get('touched_hard_requirement') or int(info.get('bullets_changed') or 0) >= 3:
+            kinds.append('hm')
+        if last['ats'] != 'pass':
+            kinds.append('ats')
     if kinds:
         job.plan([(f'{k}2', f'{"Hiring manager" if k == "hm" else "ATS"} review 2') for k in kinds] + [('revise2', 'Revise after round 2')])
         r2 = review(job, cfg, kinds, 2)
@@ -558,9 +645,11 @@ def view(d: Path) -> dict:
     if st.get('status') in ('running', 'queued') and st.get('pid') and not alive(st['pid']) \
             and not (d / 'worker.pid').exists() and st.get('updated', '') < time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(time.time() - 30)):
         st['status'], st['error'] = 'failed', 'the worker stopped unexpectedly (see worker.log)'
-    out = {k: st.get(k) for k in ('id', 'url', 'company', 'title', 'writer', 'reviewer', 'status', 'stage', 'stages',
+    out = {k: st.get(k) for k in ('id', 'url', 'company', 'title', 'writer', 'reviewer', 'writer_model', 'reviewer_model', 'mode', 'status', 'stage', 'stages',
                                   'created', 'updated', 'started', 'finished', 'error', 'cost', 'result')}
     out['folder'] = str(d)
+    out['has_pdf'] = (d / 'resume.pdf').exists()  # the first draft can be opened before the reviews finish
+    out['now'] = time.time()
     return out
 
 
@@ -570,18 +659,30 @@ def handle(msg: dict) -> dict:
     if cmd == 'hello':
         s = skill_dir()
         return {'ok': True, 'version': VERSION, 'home': str(home()), 'agents': agent_status(cfg),
-                'writer': cfg['writer'], 'reviewer': cfg['reviewer'], 'skill': str(s) if s else '',
+                'writer': cfg['writer'], 'reviewer': cfg['reviewer'], 'mode': cfg['mode'],
+                'writer_model': cfg['writer_model'], 'reviewer_model': cfg['reviewer_model'], 'skill': str(s) if s else '',
                 'tailor_config': str(tailor_config_path(cfg)) if tailor_config_path(cfg).exists() else '',
                 'poppler': bool(shutil.which('pdftotext'))}
     if cmd == 'settings':
-        allowed = {'writer', 'reviewer', 'deepseek_key', 'deepseek_model'}
+        allowed = {'writer', 'reviewer', 'mode', 'writer_model', 'reviewer_model', 'deepseek_key'}
         patch = {k: v for k, v in (msg.get('set') or {}).items() if k in allowed and isinstance(v, str)}
+        for k in ('writer_model', 'reviewer_model'):
+            if k in patch and not re.fullmatch(r'[A-Za-z0-9._:\[\]/-]{0,80}', patch[k]):
+                return {'ok': False, 'error': 'that does not look like a model name'}
+        # a new agent starts on its own best model
+        if 'writer' in patch and patch['writer'] != cfg['writer'] and 'writer_model' not in patch:
+            patch['writer_model'] = ''
+        if 'reviewer' in patch and patch['reviewer'] != cfg['reviewer'] and 'reviewer_model' not in patch:
+            patch['reviewer_model'] = ''
+        if patch.get('mode') and patch['mode'] not in ('quick', 'thorough'):
+            return {'ok': False, 'error': 'mode is quick or thorough'}
         if patch.get('writer') and patch['writer'] not in AGENTS:
             return {'ok': False, 'error': 'unknown agent'}
         if patch.get('reviewer') and patch['reviewer'] not in list(AGENTS) + ['same']:
             return {'ok': False, 'error': 'unknown agent'}
         cfg = save_config(patch)
-        return {'ok': True, 'writer': cfg['writer'], 'reviewer': cfg['reviewer'], 'agents': agent_status(cfg)}
+        return {'ok': True, 'writer': cfg['writer'], 'reviewer': cfg['reviewer'], 'mode': cfg['mode'],
+                'writer_model': cfg['writer_model'], 'reviewer_model': cfg['reviewer_model'], 'agents': agent_status(cfg)}
     if cmd == 'tailor':
         job = msg.get('job') or {}
         for a in ('writer', 'reviewer'):

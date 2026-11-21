@@ -16,6 +16,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from make_pdf import ANALYSIS, RESUME_LINES, make_pdf  # noqa: E402
 
 mode, prompt = sys.argv[1], sys.argv[2]
+STREAM = len(sys.argv) > 3 and sys.argv[3] == 'stream'
+_print = print
+
+
+def print(text, **kw):  # noqa: A001  in stream mode, speak Claude Code's stream-json
+    if not STREAM or kw.get('file'):
+        return _print(text, **kw)
+    _print(json.dumps({'type': 'assistant', 'message': {'content': [{'type': 'tool_use', 'name': 'Bash',
+           'input': {'command': 'uv run python build_resume.py', 'description': 'Build the resume PDF'}}]}}))
+    d = json.loads(text)
+    _print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, **d}))
 cwd = Path.cwd()
 role = prompt.split('\n', 1)[0].strip()
 seen = sorted(p.name for p in cwd.iterdir() if not p.name.startswith('.'))

@@ -103,7 +103,7 @@ def main():
             panel.goto(f'chrome-extension://{eid}/panel.html?tab={tab_id}')
             panel.wait_for_function("() => document.getElementById('connText').textContent === 'Claude Code'", timeout=10000)
             check('connects to the host with no token or login', panel.locator('#install').is_hidden())
-            check('says who writes and reviews', 'Writer: Claude Code · Reviewers: Claude Code' in panel.locator('#who').text_content(),
+            check('says who writes and reviews, on Opus by default', 'Writer: Claude Code Opus · Reviewers: Claude Code Opus · quick' in panel.locator('#who').text_content(),
                   panel.locator('#who').text_content())
 
             panel.click('#gear')
@@ -112,6 +112,12 @@ def main():
             panel.select_option('#reviewer', 'codex')
             panel.wait_for_function("() => document.getElementById('who').textContent.includes('Reviewers: Codex')", timeout=5000)
             check('reviewer setting saved on the host', json.loads((home / 'config.json').read_text())['reviewer'] == 'codex')
+            check('model menu offers Opus first', panel.locator('#writerModel option').first.text_content() == 'Opus (best)')
+            panel.select_option('#writerModel', 'sonnet')
+            panel.wait_for_function("() => document.getElementById('who').textContent.includes('Writer: Claude Code Sonnet')", timeout=5000)
+            check('writer model saved on the host', json.loads((home / 'config.json').read_text())['writer_model'] == 'sonnet')
+            panel.select_option('#writerModel', 'opus')
+            panel.wait_for_function("() => document.getElementById('who').textContent.includes('Writer: Claude Code Opus')", timeout=5000)
             panel.click('#closeAgents')
 
             panel.click('#capture')
@@ -122,10 +128,11 @@ def main():
             panel.wait_for_selector('#job:not([hidden])', timeout=5000)
             panel.wait_for_function("() => document.getElementById('jobBadge').textContent === 'ready'", timeout=60000)
             stages = panel.locator('#timeline li').evaluate_all('els => els.map(e => e.className)')
+            check('each finished stage shows its time', panel.locator('#timeline li .t').count() >= 5)
             check('timeline: every stage done', stages and all(c == 'done' for c in stages), str(stages))
             labels = panel.locator('#timeline li').all_text_contents()
             check('timeline shows both reviewers and the gate',
-                  any(l.startswith('Hiring manager review 1') for l in labels) and any(l.startswith('ATS review 1') for l in labels)
+                  any('Hiring manager review 1' in l for l in labels) and any('ATS review 1' in l for l in labels)
                   and labels[-1].startswith('Gate'), str(labels))
             check('gate banner', 'Passed the gate' in panel.locator('#gate').text_content())
             check('lists numbers to confirm', '14 minutes' in panel.locator('#rLists').text_content())

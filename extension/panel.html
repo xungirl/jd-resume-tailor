@@ -25,10 +25,18 @@
     <h2>Agents</h2>
     <ul id="agentList" class="agents"></ul>
     <label>Writes the resume
-      <select id="writer"></select>
+      <div class="row"><select id="writer"></select><select id="writerModel"></select></div>
     </label>
+    <input id="writerCustom" placeholder="model name, e.g. gpt-5.6-sol" hidden>
     <label>Reviews it (HM + ATS, blind)
-      <select id="reviewer"></select>
+      <div class="row"><select id="reviewer"></select><select id="reviewerModel"></select></div>
+    </label>
+    <input id="reviewerCustom" placeholder="model name" hidden>
+    <label>Review rounds
+      <select id="mode">
+        <option value="quick">Quick: one round of reviews (about half the time)</option>
+        <option value="thorough">Thorough: up to three rounds, as in the full flow</option>
+      </select>
     </label>
     <p class="muted small">A different reviewer than the writer catches more: it doesn't share the writer's blind spots.</p>
     <div id="dsBox" hidden>
