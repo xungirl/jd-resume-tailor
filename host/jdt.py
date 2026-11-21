@@ -109,10 +109,13 @@ def reading_dirs(cfg) -> list:
     tc = tailor_config_path(cfg)
     if tc.exists():
         dirs.append(tc.parent)
-        for m in re.findall(r'(~/[^\s`\'")\]]+|/Users/[^\s`\'")\]]+|/home/[^\s`\'")\]]+)', tc.read_text()):
+        # paths on the tracker's line are left out: the writer has no business there
+        text = '\n'.join(l for l in tc.read_text().splitlines() if not re.search(r'track|notion|obsidian|spreadsheet|投递', l, re.I))
+        for m in re.findall(r'(~/[^\s`\'")\]]+|/Users/[^\s`\'")\]]+|/home/[^\s`\'")\]]+)', text):
             p = Path(m.rstrip('.,;:')).expanduser()
             d = p if p.is_dir() else p.parent
-            if d.exists() and d != Path.home():
+            # not your home folder itself, and never agent settings or memory (~/.claude, ~/.codex, ...)
+            if d.exists() and d != Path.home() and not any(part.startswith('.') and part not in ('.config',) for part in d.relative_to(Path.home()).parts if d.is_relative_to(Path.home())):
                 dirs.append(d)
     out = []
     for d in dirs:
