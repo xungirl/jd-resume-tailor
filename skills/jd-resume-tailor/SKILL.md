@@ -50,10 +50,12 @@ Report constraint conflicts plainly (e.g. "JD says 2 semesters left after the in
 - Only reuse bullets that already exist in the bank, or rewrite one using facts you **verify in the repo or its benchmark/results file** (grep the code; read the README/BENCHMARK). Cite where the fact came from when you add a new bullet to the bank.
 - Never add a technology to skills because the JD wants it. If the JD's keyword has no evidence (e.g. C++, Kubernetes), leave it out and tell the user it's a gap to prepare an honest interview answer for, or a project to build.
 - Never change numbers, dates, titles or degrees. Never back-date a project.
+- Don't add lines that aren't in the bank, even true facts the user mentions in chat (work authorization, availability, relocation). Those go on the application form; put them on the resume only if the user asks for it.
 - If the user asks you to fabricate, decline and offer the honest alternative (reorder, or build the thing for real).
 
 ## 4. Build and check
 
+- Use the builder in place. Don't copy it into the user's folder or edit it to change the layout; if the page doesn't fit, change the variant (fewer or other bullets).
 - Add a new variant (named after the company/role family) instead of editing an existing one. If the build script is shared with other sessions, make **targeted** edits (insert one block), never rewrite the whole file. Back it up first.
 - Build. Treat `OVERFLOW` as a failure: cut the weakest bullet. If there is room for 2+ lines, add the next most relevant true bullet rather than leaving white space.
 - Render to PNG (`pdftoppm -r 110 -png -singlefile file.pdf out`) and **look at it**: one page, no orphan words on skill lines, headings not wrapped, links present. If bold text looks regular in the render, check `pdffonts file.pdf` before calling it a layout bug: fonts that aren't embedded get substituted, and poppler draws them without bold. The builder embeds fonts by default and prints `font: ... (NOT embedded)` when it couldn't. Without `pdftoppm`, use `sips -s format png file.pdf --out out.png` on macOS.
