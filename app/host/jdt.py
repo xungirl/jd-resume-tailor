@@ -6,8 +6,11 @@
     jdt.py doctor       which agents are installed and ready, and where things are
     jdt.py host         (started by the browser) answer one message on stdin/stdout
     jdt.py work <dir>   (started by the host) run the tailoring flow for one job
+    jdt.py web [--port N] [--no-open]
+                        the same app as a local web page, for any browser (Safari too); see web_main()
 
-No server, no port, no token: the browser starts `host` itself, and only for this extension's ID.
+With the extension there's no server, no port, no token: the browser starts `host` itself, and only for
+this extension's ID. `web` is the alternative: a server on 127.0.0.1 only, behind a random per-start key.
 The agents are the CLIs you already logged in to (Claude Code, Codex, Grok Build), or Claude Code
 pointed at DeepSeek with your DeepSeek key. Data lives in ~/.config/jd-resume-tailor/app ($JD_RESUME_TAILOR_APP_HOME).
 Python 3.9+, standard library only.
@@ -17,9 +20,12 @@ import concurrent.futures
 import difflib
 import fcntl
 import hashlib
+import hmac
+import http.server
 import json
 import os
 import re
+import secrets
 import shutil
 import signal
 import struct
@@ -27,7 +33,9 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
+import webbrowser
 from pathlib import Path
 
 VERSION = '0.2.0'
@@ -640,11 +648,27 @@ def create_job(job: dict, cfg: dict) -> str:
     return jid
 
 
+_CHILDREN = []  # processes a long-running `web` server started: reaped, so finished ones don't linger as zombies
+_CHILDREN_LOCK = threading.Lock()
+
+
+def _track(p):
+    with _CHILDREN_LOCK:
+        _CHILDREN[:] = [c for c in _CHILDREN if c.poll() is None] + [p]
+
+
+def reap_children():
+    with _CHILDREN_LOCK:
+        _CHILDREN[:] = [c for c in _CHILDREN if c.poll() is None]
+
+
 def spawn_worker(jid: str):
     d = job_path(jid)
     log = open(d / 'worker.log', 'a')
     p = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), 'work', str(d)],
                          stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True, cwd=str(d))
+    log.close()
+    _track(p)
     st = read_json(d / 'state.json', {})
     st['pid'] = p.pid
     write_json(d / 'state.json', st)
@@ -1050,7 +1074,7 @@ def handle(msg: dict) -> dict:
         d = job_path(msg.get('id', ''))
         target = d / 'resume.pdf' if (d / 'resume.pdf').exists() else d
         opener = ['open', '-R', str(target)] if sys.platform == 'darwin' else ['xdg-open', str(d)]
-        subprocess.Popen(opener, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _track(subprocess.Popen(opener, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
         return {'ok': True}
     if cmd == 'review':  # read one review or the analysis, for the panel
         d = job_path(msg.get('id', ''))
@@ -1059,7 +1083,268 @@ def handle(msg: dict) -> dict:
             return {'ok': False, 'error': 'bad name'}
         p = d / (f'{name}.diff' if name == 'bank_changes' else f'{name}.md')
         return {'ok': True, 'text': p.read_text()[:60000] if p.exists() else ''}
+    if cmd == 'fetch_url':  # the web UI's "Fetch": read the JD from a posting link
+        return fetch_url(msg.get('url', ''))
     return {'ok': False, 'error': f'unknown command {cmd!r}'}
+
+
+# ---------------------------------------------------------------- a posting link -> its JD (for the web UI)
+
+NOT_COMPANY = {'www', 'careers', 'career', 'jobs', 'job', 'apply', 'boards', 'job-boards', 'about', 'work', 'join', 'hire',
+               'com', 'io', 'co', 'net', 'org', 'ai', 'app', 'dev', 'us', 'uk', 'greenhouse', 'lever', 'ashbyhq',
+               'myworkdayjobs', 'smartrecruiters', 'oraclecloud', 'workable', 'jobvite', 'icims', 'recruitee'}
+
+
+def company_from_url(url: str) -> str:
+    """A best guess at the company from a posting link (the board's name, or the site's domain). You can edit it."""
+    u = urllib.parse.urlsplit(url)
+    host = (u.hostname or '').lower()
+    parts = [x for x in u.path.split('/') if x]
+    guess = ''
+    q = urllib.parse.parse_qs(u.query)
+    if host.endswith('greenhouse.io'):
+        guess = (q.get('for') or [''])[0] or (parts[0] if parts and parts[0] not in ('embed',) else '')
+    elif host.endswith(('ashbyhq.com', 'lever.co', 'smartrecruiters.com')) and parts:
+        guess = parts[0]
+    elif host.endswith('myworkdayjobs.com'):
+        guess = host.split('.')[0]
+    else:
+        guess = next((x for x in reversed(host.split('.')[:-1]) if x not in NOT_COMPANY), '')
+    guess = re.sub(r'[^A-Za-z0-9 &.-]', '', urllib.parse.unquote(guess)).strip()[:60]
+    if not guess or guess.isdigit():
+        return ''
+    return guess.replace('-', ' ').title() if guess.islower() else guess
+
+
+def fetch_url(url: str) -> dict:
+    """Run the skill's fetch_jd.py on a posting link: {ok, job: {url, title, company, location, text}} or {ok: False, error}."""
+    url = (url or '').strip()
+    u = urllib.parse.urlsplit(url)
+    if u.scheme not in ('http', 'https') or not u.hostname or len(url) > 2000:
+        return {'ok': False, 'error': 'Paste the posting\'s link, starting with https://'}
+    s = skill_dir()
+    script = s / 'fetch_jd.py' if s else None
+    if not script or not script.exists():
+        return {'ok': False, 'error': 'fetch_jd.py was not found (it comes with the jd-resume-tailor skill). Paste the job description instead.'}
+    try:
+        p = subprocess.run([sys.executable, str(script), url, '--json'], capture_output=True, text=True, timeout=60,
+                           stdin=subprocess.DEVNULL)
+    except subprocess.TimeoutExpired:
+        return {'ok': False, 'error': 'The posting took too long to load. Paste the job description instead.'}
+    except OSError as e:
+        return {'ok': False, 'error': f'Could not run fetch_jd.py: {e}'}
+    if p.returncode == 2:
+        return {'ok': False, 'closed': True, 'error': 'That posting is closed or no longer exists.'}
+    if p.returncode != 0:
+        why = re.sub(r'^error:\s*', '', (p.stderr.strip().splitlines() or ['unknown error'])[-1])[:200]
+        return {'ok': False, 'error': f'Could not read that page ({why}). Paste the job description instead.'}
+    try:
+        data = json.loads(p.stdout)
+    except ValueError:
+        return {'ok': False, 'error': 'fetch_jd.py gave an answer that is not JSON. Paste the job description instead.'}
+    text = (data.get('text') or '').strip()
+    if len(text) < 200:
+        return {'ok': False, 'error': 'That page has no job description we can read (it may need JavaScript). Paste the job description instead.'}
+    final = data.get('url') or url
+    return {'ok': True, 'job': {'url': final, 'title': (data.get('title') or '').strip()[:200],
+                                'company': company_from_url(final) or company_from_url(url),
+                                'location': (data.get('location') or '').strip()[:200], 'text': text[:100000],
+                                'ats': data.get('ats') or ''}}
+
+
+# ---------------------------------------------------------------- the local web UI
+
+WEB = HERE.parent / 'web'
+EXT = HERE.parent / 'extension'
+JS, CSS = 'text/javascript; charset=utf-8', 'text/css; charset=utf-8'
+STATIC = {  # a fixed list: nothing else on disk can be served
+    '/': (WEB / 'index.html', 'text/html; charset=utf-8'),
+    '/index.html': (WEB / 'index.html', 'text/html; charset=utf-8'),
+    '/web.js': (WEB / 'web.js', JS),
+    '/web.css': (WEB / 'web.css', CSS),
+    '/panel.css': (EXT / 'panel.css', CSS),
+    '/lib/ui.js': (EXT / 'lib' / 'ui.js', JS),
+    '/icons/32.png': (EXT / 'icons' / '32.png', 'image/png'),
+    '/favicon.ico': (EXT / 'icons' / '32.png', 'image/png'),
+}
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; "
+       "object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+MAX_BODY = 1_000_000
+WEB_PORTS = range(8790, 8800)
+
+
+class WebHandler(http.server.BaseHTTPRequestHandler):
+    """POST /api: one handle() message as JSON. GET /pdf?id=&t=: a job's PDF. GET /: the UI.
+    Every request: Host must be 127.0.0.1:PORT or localhost:PORT, and an Origin, if sent, must be this server.
+    /api and /pdf also need the key (X-JDRT-Token header, or t= for /pdf), compared in constant time."""
+    server_version = 'jd-resume-tailor'
+    sys_version = ''
+
+    def log_message(self, fmt_, *args):
+        if os.environ.get('JDRT_WEB_LOG'):
+            sys.stderr.write('%s %s\n' % (self.address_string(), fmt_ % args))
+
+    def _send(self, code, body: bytes, ctype: str, extra=None):
+        self.send_response(code)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('Referrer-Policy', 'no-referrer')
+        self.send_header('X-Frame-Options', 'DENY')
+        self.send_header('Cross-Origin-Resource-Policy', 'same-origin')
+        for k, v in (extra or {}).items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _json(self, code, obj):
+        self._send(code, json.dumps(obj).encode(), 'application/json')
+
+    def _refuse(self, code, why):
+        self.close_connection = True
+        self._json(code, {'ok': False, 'error': why, 'auth': code in (401, 403)})
+
+    def _guard(self) -> bool:
+        """DNS rebinding and cross-site requests stop here, before anything else is looked at."""
+        port = self.server.server_address[1]
+        host = (self.headers.get('Host') or '').strip().lower()
+        if host not in (f'127.0.0.1:{port}', f'localhost:{port}'):
+            self._refuse(403, 'wrong Host header')
+            return False
+        origin = self.headers.get('Origin')
+        if origin is not None and origin not in (f'http://127.0.0.1:{port}', f'http://localhost:{port}'):
+            self._refuse(403, 'requests from other sites are refused')
+            return False
+        return True
+
+    def _key(self, given: str) -> bool:
+        if not given:
+            self._refuse(401, 'missing key: open the link that "jdrt web" printed')
+            return False
+        if not hmac.compare_digest(given.encode('utf-8', 'replace'), self.server.token.encode()):
+            self._refuse(403, 'wrong key: open the link that "jdrt web" printed (it changes each time it starts)')
+            return False
+        if self.headers.get('Sec-Fetch-Site', 'same-origin') not in ('same-origin', 'none'):
+            self._refuse(403, 'requests from other sites are refused')
+            return False
+        return True
+
+    def do_GET(self):
+        if not self._guard():
+            return
+        u = urllib.parse.urlsplit(self.path)
+        if u.path == '/pdf':
+            return self._pdf(urllib.parse.parse_qs(u.query))
+        f = STATIC.get(u.path)
+        if not f or not f[0].exists():
+            return self._json(404, {'ok': False, 'error': 'not found'})
+        self._send(200, f[0].read_bytes(), f[1], {'Content-Security-Policy': CSP} if f[1].startswith('text/html') else None)
+
+    def _pdf(self, q):
+        if not self._key((q.get('t') or [''])[0]):
+            return
+        try:
+            p = job_path((q.get('id') or [''])[0]) / 'resume.pdf'
+        except ValueError:
+            return self._json(400, {'ok': False, 'error': 'bad job id'})
+        if not p.exists():
+            return self._json(404, {'ok': False, 'error': 'no PDF yet'})
+        how = 'attachment' if q.get('download') else 'inline'
+        self._send(200, p.read_bytes(), 'application/pdf', {'Content-Disposition': f'{how}; filename="Resume.pdf"'})
+
+    def do_POST(self):
+        if not self._guard():
+            return
+        if urllib.parse.urlsplit(self.path).path != '/api':
+            return self._refuse(404, 'not found')
+        if not self._key(self.headers.get('X-JDRT-Token', '')):
+            return
+        if (self.headers.get('Content-Type') or '').split(';')[0].strip().lower() != 'application/json':
+            return self._refuse(415, 'send JSON')
+        try:
+            n = int(self.headers.get('Content-Length') or '')
+        except ValueError:
+            return self._refuse(411, 'Content-Length is required')
+        if n > MAX_BODY:
+            return self._refuse(413, 'too large')
+        try:
+            msg = json.loads(self.rfile.read(n) or b'null')
+        except ValueError:
+            return self._refuse(400, 'not JSON')
+        if not isinstance(msg, dict):
+            return self._refuse(400, 'send one JSON object')
+        try:
+            out = handle(msg)
+        except Exception as e:  # the page shows it; the server keeps running
+            out = {'ok': False, 'error': f'{type(e).__name__}: {e}'}
+        self._json(200, out)
+
+    def do_PUT(self):
+        self._refuse(405, 'method not allowed')
+
+    do_DELETE = do_PATCH = do_OPTIONS = do_PUT
+
+
+class WebServer(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+    allow_reuse_address = False  # a busy port means busy: no sharing it with another process
+    allow_reuse_port = False
+
+
+def make_web_server(port=None, token=None) -> WebServer:
+    """Bind 127.0.0.1 only. port=None tries 8790-8799, then any free port; port=0 is any free port."""
+    last = None
+    for p in ([port] if port is not None else [*WEB_PORTS, 0]):
+        try:
+            srv = WebServer(('127.0.0.1', p), WebHandler)
+            break
+        except OSError as e:
+            last = e
+    else:
+        raise last
+    srv.token = token or secrets.token_urlsafe(24)
+    return srv
+
+
+def web_main(args):
+    port, no_open = None, False
+    it = iter(args)
+    for a in it:
+        if a == '--no-open':
+            no_open = True
+        elif a == '--port' or a.startswith('--port='):
+            v = a.split('=', 1)[1] if '=' in a else next(it, '')
+            if not v.isdigit() or int(v) > 65535:
+                sys.exit('--port needs a number (0 = any free port)')
+            port = int(v)
+        else:
+            sys.exit(f'unknown option {a}; use: jdt.py web [--port N] [--no-open]')
+    try:
+        srv = make_web_server(port)
+    except OSError as e:
+        sys.exit(f'could not listen on 127.0.0.1:{port}: {e.strerror or e}')
+    url = f'http://127.0.0.1:{srv.server_address[1]}/#t={srv.token}'
+    print(f'JD Resume Tailor is running at {url}', flush=True)
+    print('Open that link in any browser on this computer. It holds a key that changes every start: don\'t share it.\n'
+          'Keep this window open while you use it; Ctrl-C stops it (runs already started keep going).', flush=True)
+
+    def reaper():
+        while True:
+            time.sleep(5)
+            reap_children()
+    threading.Thread(target=reaper, daemon=True).start()
+    if not no_open:
+        try:
+            webbrowser.open(url)
+        except Exception:  # noqa: BLE001  no browser: the printed link is enough
+            pass
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        print('\nstopped')
+    finally:
+        srv.server_close()
 
 
 def host():
@@ -1174,6 +1459,8 @@ def main():
         return
     if a[0] == 'doctor':
         return doctor()
+    if a[0] == 'web':
+        return web_main(a[1:])
     print(__doc__.strip())
     sys.exit(2)
 
