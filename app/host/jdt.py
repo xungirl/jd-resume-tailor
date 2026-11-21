@@ -1201,9 +1201,9 @@ class WebHandler(http.server.BaseHTTPRequestHandler):
     def _json(self, code, obj):
         self._send(code, json.dumps(obj).encode(), 'application/json')
 
-    def _refuse(self, code, why):
+    def _refuse(self, code, why, auth=False):
         self.close_connection = True
-        self._json(code, {'ok': False, 'error': why, 'auth': code in (401, 403)})
+        self._json(code, {'ok': False, 'error': why, **({'auth': True} if auth else {})})
 
     def _guard(self) -> bool:
         """DNS rebinding and cross-site requests stop here, before anything else is looked at."""
@@ -1220,10 +1220,10 @@ class WebHandler(http.server.BaseHTTPRequestHandler):
 
     def _key(self, given: str) -> bool:
         if not given:
-            self._refuse(401, 'missing key: open the link that "jdrt web" printed')
+            self._refuse(401, 'missing key: open the link that "jdrt web" printed', auth=True)
             return False
         if not hmac.compare_digest(given.encode('utf-8', 'replace'), self.server.token.encode()):
-            self._refuse(403, 'wrong key: open the link that "jdrt web" printed (it changes each time it starts)')
+            self._refuse(403, 'wrong key: open the link that "jdrt web" printed (it changes each time it starts)', auth=True)
             return False
         if self.headers.get('Sec-Fetch-Site', 'same-origin') not in ('same-origin', 'none'):
             self._refuse(403, 'requests from other sites are refused')
