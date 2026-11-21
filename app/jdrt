@@ -1,0 +1,18 @@
+#!/bin/sh
+# JD Resume Tailor from the terminal:
+#   jdrt web [--port N] [--no-open]   the app in any browser (the default when you give no command)
+#   jdrt doctor | install | uninstall
+# Works from a symlink too: ln -s ~/jd-resume-tailor/app/jdrt ~/.local/bin/jdrt
+set -e
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case $link in
+    /*) self=$link ;;
+    *) self=$(dirname "$self")/$link ;;
+  esac
+done
+dir=$(cd "$(dirname "$self")" && pwd -P)
+command -v python3 >/dev/null 2>&1 || { echo "python3 is needed (on a Mac: xcode-select --install)" >&2; exit 1; }
+[ $# -gt 0 ] || set -- web
+exec python3 "$dir/host/jdt.py" "$@"
