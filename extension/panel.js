@@ -257,7 +257,7 @@ function showJob(j) {
     $('rLead').textContent = r.lead ? `Leads with: ${r.lead}` : '';
     const box = $('rLists');
     box.innerHTML = '';
-    for (const part of [list('Check these numbers: you reported them, the bank shows no re-measurement', r.unverified_numbers),
+    for (const part of [list('Script check warnings', r.warnings), list('Check these numbers: you reported them, the bank shows no re-measurement', r.unverified_numbers),
       list('Eligibility notes (for the form)', r.constraints), list('Gaps: the JD wants it, your bank has no evidence', r.gaps),
       list('Left out', r.dropped)]) if (part) box.appendChild(part);
     const rv = $('reviews');

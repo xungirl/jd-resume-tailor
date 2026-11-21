@@ -6,7 +6,7 @@
 Fails (exit 1) when: not exactly one page; no extractable text; an ATS keyword from analysis.md
 never appears and isn't listed under "Known gaps"; a keyword appears more than 4 times.
 Warns about: a lot of empty space at the bottom; bullets over 200 characters in resume_source.md.
-Needs poppler (pdfinfo, pdftotext).
+Needs poppler (pdfinfo, pdftotext, pdftoppm).
 """
 import json
 import re
@@ -49,14 +49,26 @@ def count(text: str, word: str) -> int:
 
 
 def bottom_gap_in(pdf: str):
-    p = run('pdftotext', '-bbox', '-f', '1', '-l', '1', pdf, '-')
-    if p.returncode:
+    """Empty space under the last inked row of page 1, in inches (margin included).
+    Renders a small grayscale image: pdftotext -bbox crashes on some PDFs, a picture doesn't."""
+    import tempfile
+    dpi = 36
+    with tempfile.TemporaryDirectory() as t:
+        p = run('pdftoppm', '-r', str(dpi), '-gray', '-singlefile', '-f', '1', '-l', '1', pdf, f'{t}/p')
+        f = Path(t) / 'p.pgm'
+        if p.returncode or not f.exists():
+            return None
+        data = f.read_bytes()
+    # binary PGM: "P5\n<w> <h>\n<max>\n" then w*h bytes
+    parts = data.split(maxsplit=4)
+    if parts[0] != b'P5':
         return None
-    page = re.search(r'<page width="([\d.]+)" height="([\d.]+)"', p.stdout)
-    ys = [float(y) for y in re.findall(r'<word [^>]*yMax="([\d.]+)"', p.stdout)]
-    if not page or not ys:
-        return None
-    return (float(page.group(2)) - max(ys)) / 72
+    w, h = int(parts[1]), int(parts[2])
+    pix = data[len(data) - w * h:]
+    for row in range(h - 1, -1, -1):
+        if min(pix[row * w:(row + 1) * w]) < 160:
+            return (h - 1 - row) / dpi
+    return h / dpi
 
 
 def check(pdf: str, analysis_path: str) -> dict:

@@ -533,16 +533,16 @@ def flow(job: Job, cfg: dict):
     job.stage('gate', 'Gate', 'done' if passed else 'failed',
               f"HM {last.get('hm')}, ATS {last.get('ats')}, checks {'pass' if final_check['ok'] else 'fail'}")
     gate = 'pass' if passed else 'needs_you'
-    job.finish('ready' if passed else 'needs_you', result=result(job, info, last, gate))
+    job.finish('ready' if passed else 'needs_you', result=result(job, info, last, gate, final_check['warnings']))
 
 
-def result(job: Job, info: dict, verdicts: dict, gate: str) -> dict:
+def result(job: Job, info: dict, verdicts: dict, gate: str, warnings=()) -> dict:
     r = {
         'gate': gate, 'hm': verdicts.get('hm'), 'ats': verdicts.get('ats'),
         'direction': info.get('direction', ''), 'lead': info.get('lead', ''), 'summary': info.get('summary', ''),
         'gaps': info.get('gaps', []), 'constraints': info.get('constraints', []), 'dropped': info.get('dropped', []),
         'unverified_numbers': info.get('unverified_numbers', []), 'questions': info.get('questions', []),
-        'pdf': (job.d / 'resume.pdf').exists(),
+        'warnings': list(warnings), 'pdf': (job.d / 'resume.pdf').exists(),
     }
     write_json(job.d / 'result.json', r)
     return r
