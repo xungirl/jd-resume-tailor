@@ -1,0 +1,15 @@
+/* The web UI uses the side panel's styles (panel.css); this only fits them to a full browser window or a phone. */
+body { min-width: 0; }
+main { width: 100%; max-width: 760px; margin: 0 auto; padding: 16px; }
+.top { padding-left: max(16px, calc((100% - 760px) / 2 + 16px)); padding-right: max(16px, calc((100% - 760px) / 2 + 16px)); }
+.foot { text-align: center; }
+.pair input { flex: 1 1 160px; }
+form.row { margin: 0; }
+#jd { min-height: 9em; }
+.reviewText { max-height: 60vh; }
+@media (max-width: 600px) {
+  /* 16px keeps iOS Safari from zooming into a field you tap */
+  input, textarea, select { font-size: 16px; }
+  main { padding: 12px 16px; }
+  .card { padding: 12px; }
+}

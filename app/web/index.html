@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>JD Resume Tailor</title>
+<link rel="icon" href="icons/32.png">
+<link rel="stylesheet" href="panel.css">
+<link rel="stylesheet" href="web.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img src="icons/32.png" alt=""><b>JD Resume Tailor</b></div>
+  <button id="gear" class="conn" title="Agents and settings"><i></i><span id="connText">checking…</span></button>
+</header>
+
+<main>
+  <section id="connect" class="card" hidden>
+    <h2 id="connectTitle">Not connected</h2>
+    <p id="connectText"></p>
+    <div class="cmd"><code id="startCmd">~/jd-resume-tailor/app/jdrt web</code><button id="copyCmd" class="small">Copy</button></div>
+    <p class="muted small">It prints a link with a key that changes every time it starts. Open that link here.</p>
+    <div class="row"><button id="retry" class="primary">Check again</button></div>
+  </section>
+
+  <section id="agents" class="card" hidden>
+    <h2>Agents</h2>
+    <ul id="agentList" class="agents"></ul>
+    <label>Writes the resume
+      <div class="row"><select id="writer"></select><select id="writerModel"></select></div>
+    </label>
+    <input id="writerCustom" placeholder="model name, e.g. gpt-5.6-sol" hidden>
+    <label>Reviews it (HM + ATS, blind)
+      <div class="row"><select id="reviewer"></select><select id="reviewerModel"></select></div>
+    </label>
+    <input id="reviewerCustom" placeholder="model name" hidden>
+    <label>Review rounds
+      <select id="mode">
+        <option value="quick">Quick: one round of reviews (about half the time)</option>
+        <option value="thorough">Thorough: up to three rounds, as in the full flow</option>
+      </select>
+    </label>
+    <p class="muted small">A different reviewer than the writer catches more: it doesn't share the writer's blind spots.</p>
+    <label>Your projects <span class="muted">(one per line: a folder, a GitHub repo URL, or github:yourname)</span>
+      <textarea id="projects" rows="3" placeholder="~/flowbeat&#10;https://github.com/you/raft-kv&#10;github:you"></textarea>
+    </label>
+    <div class="row"><button id="saveProjects" class="small">Save projects</button><span id="projMsg" class="muted small"></span></div>
+    <p class="muted small">The writer may add a project that isn't on your resume yet, using only facts it finds in that project's files. It reads them, never changes them.</p>
+    <div id="dsBox" hidden>
+      <label>DeepSeek API key <span class="muted">(stored only on this computer)</span>
+        <div class="row"><input id="dsKey" type="password" placeholder="sk-…" autocomplete="off"><button id="saveDs">Save</button></div>
+      </label>
+    </div>
+    <div id="envWarn" class="alert" hidden></div>
+    <div class="row"><button id="closeAgents" class="primary">Done</button></div>
+  </section>
+
+  <section id="page" class="card page">
+    <div class="eyebrow">The job</div>
+    <div id="pageTitle" class="ttl">Paste a posting link, or the job description</div>
+    <div id="pageMeta" class="muted small">Greenhouse, Ashby, Lever, Workday, Oracle and SmartRecruiters links work best.</div>
+    <form id="fetchForm" class="row" novalidate>
+      <input id="url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://boards.greenhouse.io/…" aria-label="Posting link">
+      <button id="fetch" type="submit">Fetch</button>
+    </form>
+    <div class="row pair">
+      <input id="company" placeholder="Company" aria-label="Company" autocomplete="off">
+      <input id="title" placeholder="Role title" aria-label="Role title" autocomplete="off">
+    </div>
+    <label>Job description <span id="jdLen" class="muted small"></span>
+      <textarea id="jd" rows="9" placeholder="Fetch didn't work, or no link? Paste the job description here."></textarea>
+    </label>
+    <div class="row">
+      <button id="tailor" class="primary" disabled>Tailor my resume</button>
+      <button id="clear" type="button">Clear</button>
+    </div>
+    <div id="who" class="muted small"></div>
+    <div id="pageMsg" class="alert" hidden></div>
+  </section>
+
+  <section id="job" class="card" hidden>
+    <div class="row between">
+      <div class="eyebrow">Tailoring</div>
+      <span id="jobBadge" class="badge"></span>
+    </div>
+    <div id="jobTitle" class="ttl"></div>
+    <div id="gate" class="alert" hidden></div>
+    <ol id="timeline" class="timeline"></ol>
+    <div id="jobMeta" class="muted small"></div>
+    <div id="result" hidden>
+      <p id="rSummary"></p>
+      <div id="rLead" class="small"></div>
+      <div id="rLists"></div>
+      <div id="reviews" class="row"></div>
+      <pre id="reviewText" class="reviewText" hidden></pre>
+    </div>
+    <div id="ask" hidden>
+      <div class="stepTitle">It needs your answer</div>
+      <ul id="questions"></ul>
+      <textarea id="answer" rows="3" placeholder="Your answer. The writer starts over with it."></textarea>
+      <div class="row"><button id="sendAnswer" class="primary">Send and continue</button></div>
+    </div>
+    <div class="row">
+      <button id="openPdf" class="primary" hidden>Open PDF</button>
+      <button id="downloadPdf" hidden>Download</button>
+      <button id="reveal" hidden>Show in Finder</button>
+      <button id="cancel" hidden>Stop</button>
+      <button id="reset" title="Stop if running and start this posting over">Reset</button>
+    </div>
+  </section>
+
+  <section id="recentBox" class="card" hidden>
+    <div class="eyebrow">Recent</div>
+    <ul id="recent" class="recent"></ul>
+  </section>
+</main>
+
+<footer class="foot">
+  <span class="muted">Never invents a fact. Check every line before you send it.</span>
+</footer>
+<script type="module" src="web.js"></script>
+</body>
+</html>
