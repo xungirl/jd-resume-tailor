@@ -60,6 +60,8 @@ def main():
     shutil.copytree(ROOT / 'extension', ext)
     man = json.loads((ext / 'manifest.json').read_text())
     man['host_permissions'] = ['http://127.0.0.1/*']  # read the local fixture page without the permission prompt
+    # Without "tabs", Chrome hides tab URLs from the panel and it shows "Open a job posting" on every page.
+    assert 'tabs' in man['permissions'], 'the panel needs the "tabs" permission to see which page is open'
     (ext / 'manifest.json').write_text(json.dumps(man))
 
     srv = ThreadingHTTPServer(('127.0.0.1', 0), Page)

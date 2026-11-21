@@ -28,7 +28,8 @@
     "scripting",
     "activeTab",
     "sidePanel",
-    "nativeMessaging"
+    "nativeMessaging",
+    "tabs"
   ],
   "optional_host_permissions": [
     "https://*/*",
