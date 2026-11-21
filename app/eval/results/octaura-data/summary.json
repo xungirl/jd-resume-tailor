@@ -1,0 +1,48 @@
+{
+  "slug": "octaura-data",
+  "why": "data engineering",
+  "url": "https://job-boards.greenhouse.io/octaura/jobs/4662934007",
+  "company": "Octaura",
+  "title": "Intern, Data Engineering",
+  "status": "ready",
+  "gate": "pass",
+  "hm": "yes",
+  "ats": "pass",
+  "mode": "quick",
+  "stages": [
+    "write",
+    "check",
+    "hm1",
+    "ats1",
+    "revise1",
+    "check1",
+    "gate"
+  ],
+  "seconds": 366.0,
+  "cost_usd": 3.34,
+  "numbers_not_in_bank": [],
+  "terms_not_in_bank": [],
+  "gaps": [
+    "real-time data / real-time",
+    "market data",
+    "trading / electronic trading",
+    "fintech",
+    "administration tools",
+    "communication (no presenting, writing, client or teamwork evidence)",
+    "data engineering depth: the internship has one bullet and no tools, scheduler, data volume or outcome in the bank",
+    "DocQA corpus size and what the 12 retrieval configurations varied",
+    "tinykv hardware and batch size",
+    "phone number (not in bank profile)",
+    "NYC relocation / in-office statement (not in bank)"
+  ],
+  "questions": [
+    "Add a header line like 'Relocating to NYC for Summer 2027; in-office M\u2013F'? The HM's top suggestion, but relocation stays off the page unless you say so.",
+    "Add a phone number to the header? The ATS phone field is empty and the bank profile has none.",
+    "Do you have true facts to expand the Data Analyst internship (warehouse/BI tool, scheduler, data volume, who used the dashboards, an outcome)? The HM says it's the most relevant experience on the page.",
+    "Do you know the DocQA corpus size and what the 12 retrieval configurations varied? Both would answer the HM's doubt.",
+    "Any real-time/streaming or market-data work, or a fintech course or project? Those are the JD's biggest gaps.",
+    "Builder template: bullet markers are drawn as circles, so plain-text ATS parsing shows no bullet glyph (cosmetic, per ATS). Change the builder to draw a text '\u2022'?",
+    "OK to shorten the shared Experience bullet so 'planning.' stops sitting alone on its last line? That changes every variant."
+  ],
+  "bank_changed": true
+}

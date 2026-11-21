@@ -1,0 +1,137 @@
+{
+  "id": "Octaura_Intern_Data_Engineering_925d2c",
+  "url": "https://job-boards.greenhouse.io/octaura/jobs/4662934007",
+  "company": "Octaura",
+  "title": "Intern, Data Engineering",
+  "location": "New York",
+  "writer": "claude",
+  "reviewer": "claude",
+  "writer_model": "opus",
+  "reviewer_model": "opus",
+  "mode": "quick",
+  "status": "ready",
+  "stage": "",
+  "stages": [
+    {
+      "key": "write",
+      "label": "Analysis and first draft",
+      "status": "done",
+      "detail": "Built a one-page octaura_data variant led by DocQA (GenAI + hybrid search) with Data Engineering/GenAI skill lines in the JD's words, backed by platform (Shopline), protocol (tinykv) and the SQL/dashboard internship; check.py passes. Gaps are domain ones (real-time/market data, trading, fintech); th",
+      "started": 1795254810.111518,
+      "seconds": 206
+    },
+    {
+      "key": "check",
+      "label": "Script checks",
+      "status": "done",
+      "detail": "pass",
+      "started": 1795255016.1273391,
+      "seconds": 0
+    },
+    {
+      "key": "hm1",
+      "label": "Hiring manager review 1",
+      "status": "done",
+      "detail": "yes",
+      "started": 1795255016.196117,
+      "seconds": 29
+    },
+    {
+      "key": "ats1",
+      "label": "ATS review 1",
+      "status": "done",
+      "detail": "pass",
+      "started": 1795255016.1963189,
+      "seconds": 29
+    },
+    {
+      "key": "revise1",
+      "label": "Revise after round 1",
+      "status": "done",
+      "detail": "Revised per the HM review: added the eval-set size to DocQA and the client range to tinykv, de-jargoned Shopline, dropped the throttle project and the unbacked WebSockets/Redis skills; check.py passes with 3.5 in free because the bank has no more relevant true facts. Relocation, phone, internship de",
+      "started": 1795255045.493022,
+      "seconds": 130
+    },
+    {
+      "key": "check1",
+      "started": 1795255175.9135559,
+      "label": "Script checks",
+      "status": "done",
+      "detail": "pass",
+      "seconds": 0
+    },
+    {
+      "key": "gate",
+      "label": "Gate",
+      "status": "done",
+      "detail": "HM yes, ATS pass, checks pass"
+    }
+  ],
+  "created": "2026-11-21T01:53:30",
+  "updated": "2026-11-21T01:59:36",
+  "started": "2026-11-21T01:53:30",
+  "finished": "2026-11-21T01:59:36",
+  "error": "",
+  "session": "0c6ae7e6-189b-42aa-8f27-d8e3e8f71442",
+  "cost": 3.336507,
+  "pid": 97128,
+  "bank_changed": true,
+  "result": {
+    "gate": "pass",
+    "hm": "yes",
+    "ats": "pass",
+    "direction": "ai",
+    "lead": "DocQA (GenAI Q&A over support tickets, hybrid BM25 + vector search, Recall@5 65%->95% on a 60-query test set) answers 'utilize GenAI or advance search capabilities to analyze market data' and 'trading data analysis using GenAI'",
+    "summary": "Revised per the HM review: added the eval-set size to DocQA and the client range to tinykv, de-jargoned Shopline, dropped the throttle project and the unbacked WebSockets/Redis skills; check.py passes with 3.5 in free because the bank has no more relevant true facts. Relocation, phone, internship detail and fintech/real-time evidence aren't in your bank, so they're listed as gaps and questions for you.",
+    "gaps": [
+      "real-time data / real-time",
+      "market data",
+      "trading / electronic trading",
+      "fintech",
+      "administration tools",
+      "communication (no presenting, writing, client or teamwork evidence)",
+      "data engineering depth: the internship has one bullet and no tools, scheduler, data volume or outcome in the bank",
+      "DocQA corpus size and what the 12 retrieval configurations varied",
+      "tinykv hardware and batch size",
+      "phone number (not in bank profile)",
+      "NYC relocation / in-office statement (not in bank)"
+    ],
+    "constraints": [
+      "In office in NYC, Monday through Friday; candidate is in Seattle, so relocation is needed and the HM will check it in the screen",
+      "Time frame June \u2013 August 2027; availability line says 12 weeks full-time in Summer 2027",
+      "JD says nothing about sponsorship or work authorization",
+      "Ideal candidate is 'within one year of undergraduate graduation (December 2027 \u2013 May 2028)': undergrad ended Jun 2024, MS expected Dec 2027 (inside the window); HM called it 'probably fine'"
+    ],
+    "dropped": [
+      "throttle project (4 algorithms; shared 1,000 req/s with Redis Lua): weakest match for the JD, and the HM doubted 'exactly' while the bank has no measurement setup to back it",
+      "WebSockets and Redis from skills: no bullet on the page backs them (HM flagged WebSockets against the JD's real-time emphasis)",
+      "'e-commerce platform' wording in Shopline: read as a team product; replaced by plain 'Designed 25 REST endpoints...'",
+      "'optimistic locking' detail: cut so the Shopline bullet's last line isn't a single word",
+      "original bank wordings of eval/lat/core/chaos/perf: replaced by same-fact rewrites (one fact per page)"
+    ],
+    "unverified_numbers": [
+      "GPA 3.9/4.0 (bank education)",
+      "Recall@5 65% to 95% on a 60-query test set across 12 retrieval configurations (bank rag.eval)",
+      "p50 answer latency 9.0s to 3.5s (bank rag.lat)",
+      "25 REST endpoints (bank shop.api)",
+      "90% line coverage (bank shop.test)",
+      "0 of 10,000 acknowledged writes lost across 50 SIGKILL faults (bank kv.chaos)",
+      "80 to 2,400 writes/s on 3 nodes, 1 to 64 clients; 250 ms median failover (bank kv.perf)",
+      "3 operational systems, 3 KPIs (bank experience bullet)"
+    ],
+    "questions": [
+      "Add a header line like 'Relocating to NYC for Summer 2027; in-office M\u2013F'? The HM's top suggestion, but relocation stays off the page unless you say so.",
+      "Add a phone number to the header? The ATS phone field is empty and the bank profile has none.",
+      "Do you have true facts to expand the Data Analyst internship (warehouse/BI tool, scheduler, data volume, who used the dashboards, an outcome)? The HM says it's the most relevant experience on the page.",
+      "Do you know the DocQA corpus size and what the 12 retrieval configurations varied? Both would answer the HM's doubt.",
+      "Any real-time/streaming or market-data work, or a fintech course or project? Those are the JD's biggest gaps.",
+      "Builder template: bullet markers are drawn as circles, so plain-text ATS parsing shows no bullet glyph (cosmetic, per ATS). Change the builder to draw a text '\u2022'?",
+      "OK to shorten the shared Experience bullet so 'planning.' stops sitting alone on its last line? That changes every variant."
+    ],
+    "new_from_projects": [],
+    "warnings": [
+      "3.5 in empty at the bottom of the page: add a relevant true bullet if your bank has one"
+    ],
+    "pdf": true
+  }
+}

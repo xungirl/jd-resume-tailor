@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "pages": 1,
+  "failures": [],
+  "warnings": [
+    "2.9 in empty at the bottom of the page: add a relevant true bullet if your bank has one"
+  ],
+  "keywords": {
+    "Java": 1,
+    "SQL": 2,
+    "algorithms": 2,
+    "data structures": 0,
+    "design patterns": 0,
+    "AI": 1,
+    "LLM/LLMs/large language models": 2,
+    "model evaluation": 0,
+    "API/APIs": 1,
+    "search": 1,
+    "test": 1,
+    "supervised learning": 0,
+    "responsible AI": 0,
+    "fairness": 0,
+    "privacy": 0,
+    "code reviews": 0,
+    "JavaScript": 0,
+    "HTML/CSS": 0,
+    "Scala": 0,
+    "Ruby/Rails": 0,
+    "C++": 0,
+    "Kotlin": 0,
+    "Swift": 0,
+    "Objective-C": 0,
+    "mentoring/teaching/leadership": 0
+  },
+  "bottom_gap_in": 2.92
+}

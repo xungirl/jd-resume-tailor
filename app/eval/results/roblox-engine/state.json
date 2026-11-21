@@ -1,0 +1,63 @@
+{
+  "id": "Roblox_Summer_2027_Canada_Software_Engineer_Intern_ce40dd",
+  "url": "https://careers.roblox.com/jobs/8386080?gh_jid=8386080",
+  "company": "Roblox",
+  "title": "[Summer 2027 Canada] Software Engineer Intern, Engine",
+  "location": "Vancouver, British Columbia, Canada",
+  "writer": "claude",
+  "reviewer": "claude",
+  "writer_model": "opus",
+  "reviewer_model": "opus",
+  "mode": "quick",
+  "status": "skip",
+  "stage": "",
+  "stages": [
+    {
+      "key": "write",
+      "label": "Analysis and first draft",
+      "status": "done",
+      "detail": "no resume.pdf was written",
+      "started": 1795254398.3034391,
+      "seconds": 40
+    }
+  ],
+  "created": "2026-11-21T01:46:38",
+  "updated": "2026-11-21T01:47:18",
+  "started": "2026-11-21T01:46:38",
+  "finished": "2026-11-21T01:47:18",
+  "error": "",
+  "session": "fb96d733-fb41-4626-85f4-e2af7e17ac17",
+  "cost": 0.41636920000000005,
+  "pid": 95752,
+  "bank_changed": false,
+  "result": {
+    "gate": "n/a",
+    "hm": null,
+    "ats": null,
+    "direction": "none",
+    "lead": "none: not built",
+    "summary": "Skipped: this Roblox Engine internship is onsite in Vancouver, Canada only, which your rules mark as skip. Your bank also has no evidence for its core C++/graphics/physics requirements, so nothing was built.",
+    "gaps": [
+      "C++",
+      "real-time computer graphics/rendering",
+      "DirectX/Vulkan/Metal/OpenGL",
+      "physics/rigid body dynamics/fluid simulations",
+      "3D math/numerical methods",
+      "game engine"
+    ],
+    "constraints": [
+      "Onsite in Vancouver, BC, Canada (Tue/Wed/Thu in office); needs Canadian work authorization. The JD says nothing about sponsorship for Canada",
+      "Summer 2027, 12 weeks; pay listed as $52 CAD (looks hourly)"
+    ],
+    "dropped": [
+      "whole resume: the role is onsite in Vancouver, Canada only, and the run rules say to skip locations entirely outside the US"
+    ],
+    "unverified_numbers": [],
+    "questions": [
+      "If you can work in Canada and still want this engine role, you'd need a real C++ graphics or physics project in the bank first. Do you want to build one?"
+    ],
+    "new_from_projects": [],
+    "warnings": [],
+    "pdf": false
+  }
+}

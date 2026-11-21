@@ -1,0 +1,147 @@
+{
+  "id": "Anduril_2027_Machine_Learning_Engineer_Intern_a46bfb",
+  "url": "https://boards.greenhouse.io/andurilindustries/jobs/5274037007",
+  "company": "Anduril",
+  "title": "2027 Machine Learning Engineer Intern",
+  "location": "Santa Ana, California, United States",
+  "writer": "claude",
+  "reviewer": "claude",
+  "writer_model": "opus",
+  "reviewer_model": "opus",
+  "mode": "quick",
+  "status": "needs_you",
+  "stage": "",
+  "stages": [
+    {
+      "key": "write",
+      "label": "Analysis and first draft",
+      "status": "done",
+      "detail": "I built a one-page anduril_ml variant: DocQA's baseline-vs-experiments retrieval evaluation leads, backed by tinykv's fault experiments, Shopline's Docker/AWS/Git CI, and the algorithms and SQL pipeline bullets. The check passes. The fit is weak because the bank has no model training (PyTorch/CV/GNN",
+      "started": 1795254444.0911202,
+      "seconds": 240
+    },
+    {
+      "key": "check",
+      "label": "Script checks",
+      "status": "done",
+      "detail": "pass",
+      "started": 1795254684.2575948,
+      "seconds": 0
+    },
+    {
+      "key": "hm1",
+      "label": "Hiring manager review 1",
+      "status": "done",
+      "detail": "no",
+      "started": 1795254684.3233228,
+      "seconds": 27
+    },
+    {
+      "key": "ats1",
+      "label": "ATS review 1",
+      "status": "done",
+      "detail": "pass",
+      "started": 1795254684.3236191,
+      "seconds": 27
+    },
+    {
+      "key": "revise1",
+      "label": "Revise after round 1",
+      "status": "done",
+      "detail": "Revision 1 restores the test setup the HM doubted (60-query test set, 12 configurations, 1 to 64 clients) and spells out natural language processing and large language model for ATS. The check passes on one page. The HM's 'no' rests on gaps the bank can't fill truthfully: no model training or PyTorc",
+      "started": 1795254711.4972548,
+      "seconds": 96
+    },
+    {
+      "key": "check1",
+      "started": 1795254807.4649558,
+      "label": "Script checks",
+      "status": "done",
+      "detail": "pass",
+      "seconds": 0
+    },
+    {
+      "key": "gate",
+      "label": "Gate",
+      "status": "failed",
+      "detail": "HM no, ATS pass, checks pass"
+    }
+  ],
+  "created": "2026-11-21T01:47:24",
+  "updated": "2026-11-21T01:53:27",
+  "started": "2026-11-21T01:47:24",
+  "finished": "2026-11-21T01:53:27",
+  "error": "",
+  "session": "c9c9de08-21b5-488b-aa2a-f4d953020bbf",
+  "cost": 3.668312400000001,
+  "pid": 95807,
+  "bank_changed": true,
+  "result": {
+    "gate": "needs_you",
+    "hm": "no",
+    "ats": "pass",
+    "direction": "ai",
+    "lead": "DocQA (Recall@5 from a 65% baseline to 95% on a 60-query test set across 12 retrieval configurations; LLM Q&A pipeline latency 9.0s to 3.5s) answers 'Train and evaluate models ... and compare them against simple baselines' and 'Experience designing experiments, analyzing results, and building end-to-end ML pipelines'",
+    "summary": "Revision 1 restores the test setup the HM doubted (60-query test set, 12 configurations, 1 to 64 clients) and spells out natural language processing and large language model for ATS. The check passes on one page. The HM's 'no' rests on gaps the bank can't fill truthfully: no model training or PyTorch, and no stated U.S. Person status.",
+    "gaps": [
+      "PyTorch",
+      "TensorFlow",
+      "machine learning (no model training)",
+      "deep learning",
+      "computer vision",
+      "graph neural networks",
+      "vision-language models",
+      "labeled dataset",
+      "statistics",
+      "probability",
+      "linear algebra",
+      "data structures (not named)",
+      "Linux",
+      "GPU",
+      "C++",
+      "CUDA",
+      "AI coding tools",
+      "CAD",
+      "3D geometry",
+      "engineering drawings",
+      "manufacturing data",
+      "human review step for model predictions",
+      "DocQA eval-set labeling source and what each of the 12 configurations varied",
+      "tinykv benchmark hardware/payload/fsync settings"
+    ],
+    "constraints": [
+      "Must be a U.S. Person (export-controlled access); the bank doesn't record citizenship or green card, so confirm before applying; U.S. clearance eligibility may be required",
+      "In-person 12-week internship in Santa Ana, CA, summer 2027; the resume says Seattle, so relocation goes on the form",
+      "Must return to school for at least one quarter/semester after the internship: passes (Expected Dec 2027)"
+    ],
+    "dropped": [
+      "shop.api (REST endpoints/schema): proves no JD requirement",
+      "gateway.redis (shared 1,000 req/s limit): a true result for throttle, but it proves no JD requirement",
+      "'tool-calling agents' from the NLP skills line: dropped so the line fits after spelling out 'Natural Language Processing (NLP)'",
+      "HM's U.S. Person / on-site line: not in the bank, belongs on the application form unless you ask for it",
+      "Skills Kubernetes, Spring Boot, gRPC, WebSockets, and the distributed-systems line: unrelated to the JD"
+    ],
+    "unverified_numbers": [
+      "Recall@5 65% -> 95%, 60-query test set, 12 retrieval configurations (DocQA, bank rag.eval)",
+      "p50 latency 9.0s -> 3.5s (DocQA, bank rag.lat)",
+      "0 of 10,000 acked writes lost, 50 SIGKILL faults (tinykv, bank kv.chaos)",
+      "80 -> 2,400 writes/s, 1 to 64 clients, 3-node cluster, 250 ms median failover (tinykv, bank kv.perf)",
+      "90% line coverage (Shopline, bank shop.test)",
+      "4 rate-limiting algorithms (throttle, bank gateway.algo)",
+      "3 operational systems, 3 KPIs (Example Logistics, bank experience)",
+      "GPA 3.9/4.0 (bank education)"
+    ],
+    "questions": [
+      "Are you a U.S. Person (citizen, permanent resident, asylee or refugee)? If not, skip this role. If yes, do you want a one-line 'U.S. Person; able to work in person in Santa Ana, CA, Summer 2027' on the resume, as the HM suggested? It isn't in your bank, so I didn't add it.",
+      "Do you have real ML training work (PyTorch, CV/NLP models, GPU/Colab) or coursework (ML, probability, statistics, linear algebra, data structures) that isn't in the bank? The HM says this one gap decides the screen, and there are ~2.8 in free to lead with it.",
+      "Who labeled the 60-query DocQA test set, and what did the 12 configurations vary? If you add it to the bank, the lead bullet answers the HM's overfitting doubt.",
+      "Builder template (not edited): the ATS reviewer notes that right-aligned location/dates extract with no separator ('Example State University Seattle, WA') and that bullet glyphs are drawn shapes, so they don't appear in the extracted text. Should the builder add a ' | ' separator and a text bullet character?",
+      "Is 'Git' in the Tools line OK? The evidence is GitHub repos plus GitHub Actions CI that blocks merges."
+    ],
+    "new_from_projects": [],
+    "warnings": [
+      "2.8 in empty at the bottom of the page: add a relevant true bullet if your bank has one"
+    ],
+    "pdf": true
+  }
+}

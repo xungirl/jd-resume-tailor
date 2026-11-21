@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "JD Resume Tailor",
+  "version": "0.2.0",
+  "description": "Capture the job description on any job page and have the AI agent already on your computer (Claude Code, Codex, Grok, DeepSeek) tailor your resume to it, with blind reviewers.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1LVtLX4EXzofKS+YCW6zEJQR6EgoiglnbADItEdq7bp1Bn2Y90ZfmZMXl6J0urubq9T2yX3Ucc3ytrVVn6QI4GBaa032JpQyinwuP+sdFJggoJajLKXgFpimaNmcWfzgREpcYfTBUFgF54nSB1gUSu2t07Apwnp0FF2NE0aJsj0knfaPpPS5hU40RfuzQa6okBXArydwSLq/V7Xa51rGpS+2SsrzZssRcJvqJ5/Uwvtp47UH+MxQLN2S3stdakNKjhJauj8xn60koGgVkoElnYAriTO6M2aZQ7ceR7YssF6ToK+icXihCbz2GrX+3d9USwWvZap+S/ZwoqJ+dbqSpwIDAQAB",
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "JD Resume Tailor",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "sidePanel",
+    "nativeMessaging",
+    "tabs"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ]
+}

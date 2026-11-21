@@ -1,0 +1,64 @@
+--- alex-rivera/resume.toml (before this run)
++++ alex-rivera/resume.toml
+@@ -51,6 +51,22 @@
+ [skills.test]
+ label = "Testing"
+ text = "JUnit 5, pytest, Go race detector, fault injection, load testing (p50/p99)"
++# --- ML-intern reorderings (2026-11-21, Anduril): same skills as above, reordered/relabeled, nothing new
++[skills.lang_py]
++label = "Languages"
++text = "Python, SQL, Go, Java, TypeScript"
++[skills.ai_ml]
++label = "Natural Language Processing (NLP)"
++text = "RAG, embeddings, retrieval evaluation, LLM evaluation harnesses"
++[skills.tools_ml]
++label = "Tools"
++text = "Git, Docker, AWS (ECS, RDS, S3, IAM), GitHub Actions CI/CD, Terraform"
++[skills.test_ml]
++label = "Testing &amp; Experiments"
++text = "pytest, JUnit 5, fault injection, load testing (p50/p99), Go race detector"
++[skills.data_ml]
++label = "Data &amp; Backend"
++text = "PostgreSQL, Redis, FastAPI, REST APIs"
+ 
+ # ------------------------------------------------------------------ projects: bullet bank
+ [projects.kv]
+@@ -62,6 +78,11 @@
+ core = "Built a Raft key-value store in Go (stdlib only): leader election, log replication, and a <b>CRC-checked write-ahead log</b> with fsync and group commit."
+ chaos = "Lost <b>0 of 10,000 acknowledged writes</b> across <b>50 SIGKILL faults</b> in a chaos harness that reads every acked key back through the log."
+ perf = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> (1 to 64 clients) via group commit; measured <b>250 ms median</b> leader failover."
++# perf_ml/core_ml (rev1: client range restored as load-test setup): perf reworded, core without group commit (stated in perf); same facts
++perf_ml = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> in load tests from 1 to 64 clients by adding group commit; measured <b>250 ms median</b> leader failover."
++core_ml = "Built a Raft key-value store in Go (stdlib only) with leader election, log replication, and a <b>CRC-checked write-ahead log</b> with fsync."
++# ML wording of chaos (2026-11-21): same facts as chaos, reworded only
++chaos_ml = "Verified <b>0 of 10,000 acknowledged writes</b> lost across <b>50 SIGKILL fault experiments</b> with a chaos harness that reads every acked key back through the log."
+ 
+ [projects.gateway]
+ name = "throttle"
+@@ -87,6 +108,9 @@
+ [projects.rag.bullets]
+ eval = "Benchmarked <b>12 retrieval configurations</b> on a 60-query test set, raising <b>Recall@5 from 65% to 95%</b> with hybrid BM25 + vector search."
+ lat = "Cut p50 answer latency from <b>9.0s to 3.5s</b> by caching embeddings and removing a redundant retrieval call."
++# ML wording of eval/lat (2026-11-21, rev1 restores test-set size): same facts as eval/lat above, reworded only
++eval_ml = "Raised <b>Recall@5 from a 65% baseline to 95%</b> on a <b>60-query test set</b> by benchmarking <b>12 retrieval configurations</b>, landing on hybrid BM25 + vector search."
++lat_ml = "Cut p50 answer latency of the large language model (LLM) Q&amp;A pipeline from <b>9.0s to 3.5s</b> by caching embeddings and removing a redundant retrieval call."
+ 
+ [[experience]]
+ company = "Example Logistics Co."
+@@ -115,6 +139,16 @@
+   { key = "shop", bullets = ["aws"] },
+ ]
+ 
++[variants.anduril_ml]         # ML engineer intern (Anduril Maritime Digital Production), 2026-11-21
++availability = true           # JD: 12-week summer + must return to school
++skills = ["lang_py", "ai_ml", "test_ml", "tools_ml", "data_ml"]
++projects = [
++  { key = "rag", bullets = ["eval_ml", "lat_ml"] },
++  { key = "kv", bullets = ["chaos_ml", "perf_ml", "core_ml"] },
++  { key = "shop", bullets = ["aws", "test"] },
++  { key = "gateway", bullets = ["algo"] },
++]
++
+ [variants.ai]                 # AI / LLM application engineering
+ skills = ["ai", "lang_java", "backend", "cloud"]
+ projects = [

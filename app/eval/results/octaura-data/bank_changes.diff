@@ -1,0 +1,77 @@
+--- alex-rivera/resume.toml (before this run)
++++ alex-rivera/resume.toml
+@@ -51,6 +51,21 @@
+ [skills.test]
+ label = "Testing"
+ text = "JUnit 5, pytest, Go race detector, fault injection, load testing (p50/p99)"
++[skills.lang_python]
++label = "Languages"
++text = "Python, SQL, Java, Go, TypeScript"
++[skills.data_eng]
++label = "Data Engineering"
++text = "SQL pipelines, data analysis, metrics dashboards, PostgreSQL schema design"
++[skills.genai_search]
++label = "GenAI &amp; Search"
++text = "RAG, embeddings, hybrid BM25 + vector search, retrieval evaluation, LLM evaluation harnesses"
++[skills.cloud_lean]
++label = "Cloud &amp; DevOps"
++text = "AWS (ECS Fargate, RDS), Docker, Terraform, GitHub Actions CI/CD"
++[skills.backend_rt]
++label = "Backend &amp; Systems"
++text = "REST, Spring Boot, FastAPI, Raft, write-ahead logs, JUnit, Testcontainers"
+ 
+ # ------------------------------------------------------------------ projects: bullet bank
+ [projects.kv]
+@@ -62,6 +77,10 @@
+ core = "Built a Raft key-value store in Go (stdlib only): leader election, log replication, and a <b>CRC-checked write-ahead log</b> with fsync and group commit."
+ chaos = "Lost <b>0 of 10,000 acknowledged writes</b> across <b>50 SIGKILL faults</b> in a chaos harness that reads every acked key back through the log."
+ perf = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> (1 to 64 clients) via group commit; measured <b>250 ms median</b> leader failover."
++# octaura_data rewrites (same facts as core/chaos above, JD wording)
++core_protocol = "Implemented the Raft replication protocol in Go (stdlib only) for a key-value store: leader election, log replication, and a <b>CRC-checked write-ahead log</b>."
++perf_tp = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> (1 to 64 clients) via group commit; <b>250 ms median</b> failover."
++chaos_data = "Lost <b>0 of 10,000 acknowledged writes</b> across <b>50 SIGKILL faults</b> by building a chaos harness that reads every acked key back through the log."
+ 
+ [projects.gateway]
+ name = "throttle"
+@@ -70,6 +89,8 @@
+ [projects.gateway.bullets]
+ algo = "Implemented <b>4 rate-limiting algorithms</b> (token bucket, fixed window, sliding log, sliding counter) behind one interface with in-memory and Redis backends."
+ redis = "Used <b>atomic Redis Lua scripts</b> so 3 gateway instances enforced a shared 1,000 req/s limit exactly under load."
++# octaura_data rewrite (same facts as redis above)
++redis_shared = "Held 3 gateway instances to a shared <b>1,000 req/s limit</b> exactly under load with <b>atomic Redis Lua scripts</b>."
+ 
+ [projects.shop]
+ name = "Shopline"
+@@ -79,6 +100,9 @@
+ api = "Designed <b>25 REST endpoints</b> and a normalized PostgreSQL schema for carts, orders and inventory with optimistic locking."
+ test = "Reached <b>90% line coverage</b> with JUnit and Testcontainers; CI on GitHub Actions blocks merges on failing tests."
+ aws = "Deployed with Docker on <b>AWS ECS Fargate</b> behind an ALB with RDS PostgreSQL, defined as code in Terraform."
++# octaura_data rewrite (same facts as api above, JD wording)
++api_tight = "Designed <b>25 REST endpoints</b> and a normalized PostgreSQL schema for carts, orders and inventory."
++api_features = "Added cart, order and inventory features to an e-commerce platform via <b>25 REST endpoints</b> on a normalized PostgreSQL schema with optimistic locking."
+ 
+ [projects.rag]
+ name = "DocQA"
+@@ -87,6 +111,9 @@
+ [projects.rag.bullets]
+ eval = "Benchmarked <b>12 retrieval configurations</b> on a 60-query test set, raising <b>Recall@5 from 65% to 95%</b> with hybrid BM25 + vector search."
+ lat = "Cut p50 answer latency from <b>9.0s to 3.5s</b> by caching embeddings and removing a redundant retrieval call."
++# octaura_data rewrites (same facts as eval/lat above, JD wording)
++eval_genai = "Raised <b>Recall@5 from 65% to 95%</b> on a 60-query test set for GenAI Q&amp;A over support tickets by benchmarking 12 retrieval configurations with hybrid BM25 + vector search."
++lat_rag = "Cut RAG <b>p50 answer latency from 9.0s to 3.5s</b> by caching embeddings and removing a redundant retrieval call."
+ 
+ [[experience]]
+ company = "Example Logistics Co."
+@@ -122,3 +149,12 @@
+   { key = "shop", bullets = ["api", "aws"] },
+   { key = "kv", bullets = ["core", "chaos"] },
+ ]
++
++[variants.octaura_data]       # data engineering intern: GenAI/search over data, dashboards, platform features
++availability = true           # JD gives a June-August 2027 time frame
++skills = ["lang_python", "data_eng", "genai_search", "backend_rt", "cloud_lean"]
++projects = [
++  { key = "rag", bullets = ["eval_genai", "lat_rag"] },
++  { key = "shop", bullets = ["api_tight", "test", "aws"] },
++  { key = "kv", bullets = ["core_protocol", "chaos_data", "perf_tp"] },
++]

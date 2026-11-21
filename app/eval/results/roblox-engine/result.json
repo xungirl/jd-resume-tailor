@@ -1,0 +1,30 @@
+{
+  "gate": "n/a",
+  "hm": null,
+  "ats": null,
+  "direction": "none",
+  "lead": "none: not built",
+  "summary": "Skipped: this Roblox Engine internship is onsite in Vancouver, Canada only, which your rules mark as skip. Your bank also has no evidence for its core C++/graphics/physics requirements, so nothing was built.",
+  "gaps": [
+    "C++",
+    "real-time computer graphics/rendering",
+    "DirectX/Vulkan/Metal/OpenGL",
+    "physics/rigid body dynamics/fluid simulations",
+    "3D math/numerical methods",
+    "game engine"
+  ],
+  "constraints": [
+    "Onsite in Vancouver, BC, Canada (Tue/Wed/Thu in office); needs Canadian work authorization. The JD says nothing about sponsorship for Canada",
+    "Summer 2027, 12 weeks; pay listed as $52 CAD (looks hourly)"
+  ],
+  "dropped": [
+    "whole resume: the role is onsite in Vancouver, Canada only, and the run rules say to skip locations entirely outside the US"
+  ],
+  "unverified_numbers": [],
+  "questions": [
+    "If you can work in Canada and still want this engine role, you'd need a real C++ graphics or physics project in the bank first. Do you want to build one?"
+  ],
+  "new_from_projects": [],
+  "warnings": [],
+  "pdf": false
+}

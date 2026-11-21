@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Stands in for claude/codex/grok in tests. Usage: fake_agent.py <mode> <prompt>.
+
+Writer: writes analysis.md, resume.pdf, resume_source.md, notes.md, writer.json in its cwd.
+HM review: "unsure" in round 1, "yes" later. ATS review: "pass". Reviews list the files they can see,
+so the test can check that reviewers only get the JD and the resume.
+If the JD contains SECURITY CLEARANCE, the writer stops with a question (needs_user), unless
+my_answers.md exists.
+"""
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from make_pdf import ANALYSIS, RESUME_LINES, make_pdf  # noqa: E402
+
+mode, prompt = sys.argv[1], sys.argv[2]
+STREAM = len(sys.argv) > 3 and sys.argv[3] == 'stream'
+_print = print
+
+
+def print(text, **kw):  # noqa: A001  in stream mode, speak Claude Code's stream-json
+    if not STREAM or kw.get('file'):
+        return _print(text, **kw)
+    _print(json.dumps({'type': 'assistant', 'message': {'content': [{'type': 'tool_use', 'name': 'Bash',
+           'input': {'command': 'uv run python build_resume.py', 'description': 'Build the resume PDF'}}]}}))
+    d = json.loads(text)
+    _print(json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, **d}))
+cwd = Path.cwd()
+role = prompt.split('\n', 1)[0].strip()
+seen = sorted(p.name for p in cwd.iterdir() if not p.name.startswith('.'))
+
+if role.startswith('ROLE: writer'):
+    assert mode == 'write', mode
+    jd = (cwd / 'jd.md').read_text()
+    if 'SECURITY CLEARANCE' in jd and not (cwd / 'my_answers.md').exists() and 'revision' not in role:
+        (cwd / 'writer.json').write_text(json.dumps({'status': 'needs_user', 'questions': ['The JD needs a security clearance. Do you hold one?'],
+                                                     'summary': 'Stopped: clearance required.'}))
+        print(json.dumps({'result': 'stopped', 'session_id': 'sess-1', 'total_cost_usd': 0.01}))
+        sys.exit(0)
+    log = Path(os.environ.get('JD_RESUME_TAILOR_APP_HOME', '/tmp')) / 'writes.log'
+    with open(log, 'a') as f:
+        f.write(f'start {cwd.name} {time.time()}\n')
+    time.sleep(float(os.environ.get('FAKE_SLEEP', '0')))
+    cfgp = os.environ.get('JD_RESUME_TAILOR_CONFIG')
+    if cfgp and Path(cfgp).exists() and 'revision' not in role:  # like the skill: add a variant to the bank
+        import re
+        m = re.search(r'(/\S+\.toml)', Path(cfgp).read_text())
+        if m and Path(m.group(1)).exists():
+            with open(m.group(1), 'a') as f:
+                f.write(f'\n[variants.{cwd.name[:12]}]\nprojects = ["trailmap"]\n')
+    (cwd / 'analysis.md').write_text(ANALYSIS)
+    make_pdf(cwd / 'resume.pdf', RESUME_LINES)
+    (cwd / 'resume_source.md').write_text('\n'.join(RESUME_LINES))
+    (cwd / 'notes.md').write_text('Led with Trailmap.\n')
+    revisions = len([l for l in (cwd / 'notes.md').read_text().splitlines()])
+    (cwd / 'writer.json').write_text(json.dumps({
+        'status': 'built', 'direction': 'backend', 'lead': 'Trailmap answers "route-planning API"',
+        'dropped': ['Pixel Pets: off-topic'], 'gaps': ['Kubernetes'], 'constraints': ['No visa sponsorship'],
+        'unverified_numbers': ['14 minutes to 2 minutes (self-reported)'], 'questions': [],
+        'bullets_changed': 1 if 'revision' in role else 0, 'touched_hard_requirement': False,
+        'new_from_projects': (json.loads((cwd / 'writer.json').read_text()).get('new_from_projects', []) if 'revision' in role and (cwd / 'writer.json').exists() else [{'project': 'telemetry-etl', 'bullet': 'Built a Beam pipeline for flight telemetry',
+                                'source': 'README.md'}] if './projects.md' in prompt and (cwd / 'projects.md').exists() else []),
+        'summary': ('Revised: ' if 'revision' in role else '') + 'Backend resume led by Trailmap.'}))
+    with open(log, 'a') as f:
+        f.write(f'end {cwd.name} {time.time()}\n')
+    with open(cwd / 'calls.log', 'a') as f:
+        f.write(role + ' | session=' + os.environ.get('FAKE_SESSION', '') + '\n')
+    print(json.dumps({'result': 'built', 'session_id': 'sess-1', 'total_cost_usd': 0.05}))
+elif role == 'ROLE: hm':
+    assert mode == 'review', mode
+    rnd = cwd.name.split('_')[-1]
+    v = 'unsure' if rnd == '1' else 'yes'
+    print(json.dumps({'result': f'files: {" ".join(seen)}\n1. Backend student.\n2. {v}\nVERDICT: {v}', 'session_id': 'r', 'total_cost_usd': 0.02}))
+elif role == 'ROLE: ats':
+    assert mode == 'review', mode
+    print(json.dumps({'result': f'files: {" ".join(seen)}\n1. pass\nVERDICT: pass', 'session_id': 'r', 'total_cost_usd': 0.02}))
+else:
+    print('unknown role: ' + role, file=sys.stderr)
+    sys.exit(3)

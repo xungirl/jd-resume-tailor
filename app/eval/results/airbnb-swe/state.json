@@ -1,0 +1,141 @@
+{
+  "id": "Airbnb_Software_Engineering_Intern_BS_MS_4f88d5",
+  "url": "https://careers.airbnb.com/positions/8360478?gh_jid=8360478",
+  "company": "Airbnb",
+  "title": "Software Engineering Intern (BS/MS)",
+  "location": "San Francisco, California",
+  "writer": "claude",
+  "reviewer": "claude",
+  "writer_model": "opus",
+  "reviewer_model": "opus",
+  "mode": "quick",
+  "status": "ready",
+  "stage": "",
+  "stages": [
+    {
+      "key": "write",
+      "label": "Analysis and first draft",
+      "status": "done",
+      "detail": "Built a one-page backend-led resume for Airbnb's SWE Intern: Shopline leads for Java/SQL and end-to-end product backend, DocQA covers the AI-awareness requirement, and tinykv/throttle show fundamentals. The check passes. The real issues are no sponsorship (confirm work authorization), the SF onsite ",
+      "started": 1795254027.3731358,
+      "seconds": 194
+    },
+    {
+      "key": "check",
+      "label": "Script checks",
+      "status": "done",
+      "detail": "pass",
+      "started": 1795254221.772725,
+      "seconds": 0
+    },
+    {
+      "key": "hm1",
+      "label": "Hiring manager review 1",
+      "status": "done",
+      "detail": "yes",
+      "started": 1795254221.857651,
+      "seconds": 33
+    },
+    {
+      "key": "ats1",
+      "label": "ATS review 1",
+      "status": "done",
+      "detail": "pass",
+      "started": 1795254221.857876,
+      "seconds": 37
+    },
+    {
+      "key": "revise1",
+      "label": "Revise after round 1",
+      "status": "done",
+      "detail": "Revision 1 removed the unbacked 'exactly' from the throttle bullet, brought back the 1-64 client load setup on tinykv throughput, trimmed skills that no bullet backs, and spelled out 'large language model' once; the check still passes on one page. HM's bigger asks (work authorization line, collabora",
+      "started": 1795254259.114835,
+      "seconds": 134
+    },
+    {
+      "key": "check1",
+      "started": 1795254393.44527,
+      "label": "Script checks",
+      "status": "done",
+      "detail": "pass",
+      "seconds": 0
+    },
+    {
+      "key": "gate",
+      "label": "Gate",
+      "status": "done",
+      "detail": "HM yes, ATS pass, checks pass"
+    }
+  ],
+  "created": "2026-11-21T01:40:27",
+  "updated": "2026-11-21T01:46:33",
+  "started": "2026-11-21T01:40:27",
+  "finished": "2026-11-21T01:46:33",
+  "error": "",
+  "session": "6b62ac99-872c-4fee-b4ff-7e910e17cc21",
+  "cost": 3.4046042000000005,
+  "pid": 95351,
+  "bank_changed": true,
+  "result": {
+    "gate": "pass",
+    "hm": "yes",
+    "ats": "pass",
+    "direction": "backend",
+    "lead": "Shopline (25 REST endpoints + PostgreSQL schema for carts/orders/inventory, 90% coverage, deployed on AWS) leads. It answers 'Experience with one or more programming languages or tools (e.g. Java, ... SQL ...)' and matches past intern projects like 'Developed the backend ... for personalized Airbnb gift cards'. DocQA comes second for 'Foundational awareness of AI concepts \u2014 such as ... model evaluation, or working with APIs backed by large language models (LLMs)'.",
+    "summary": "Revision 1 removed the unbacked 'exactly' from the throttle bullet, brought back the 1-64 client load setup on tinykv throughput, trimmed skills that no bullet backs, and spelled out 'large language model' once; the check still passes on one page. HM's bigger asks (work authorization line, collaboration, responsible AI, held-out eval, project dates) need facts only you have, so they're listed as questions and gaps.",
+    "gaps": [
+      "data structures",
+      "design patterns",
+      "model evaluation (only retrieval evaluation)",
+      "supervised learning",
+      "machine learning",
+      "responsible AI / fairness / privacy / safety",
+      "code reviews",
+      "collaboration (all projects solo)",
+      "written/verbal communication, time management",
+      "JavaScript / HTML/CSS (no frontend/UI work)",
+      "Scala, Ruby/Rails, C++, Kotlin, Swift, Objective-C",
+      "Java only on the Languages line, no bullet says Java",
+      "mentoring / teaching / leadership",
+      "held-out evaluation split for DocQA",
+      "measured product result for Shopline",
+      "US work authorization statement",
+      "phone number",
+      "dates for Shopline, DocQA, throttle and the MS start"
+    ],
+    "constraints": [
+      "No visa or immigration sponsorship, now or in the future; US work authorization required (the bank has no authorization fact, so confirm before applying)",
+      "Must be based in San Francisco, CA, in the office 3 days/week (candidate is in Seattle; domestic relocation support offered)",
+      "Program dates fixed: May 24 - Aug 13, 2027",
+      "Graduation Dec 2027 is inside the required Dec 2027 - Jun 2028 window",
+      "Apply by Dec 2, 2027 11:45 pm PST (per the JD)"
+    ],
+    "dropped": [
+      "Skills with no bullet behind them (gRPC, WebSockets, Kubernetes, S3, IAM, tool-calling agents, Go race detector): trimmed after HM review",
+      "'exactly' in the throttle Redis bullet: the bank has no over-admission figure to back it",
+      "Distributed Systems skills line: the JD never mentions it, and tinykv's bullets already show Raft",
+      "Project dates: only tinykv has one, so dates stay off until all projects have them"
+    ],
+    "unverified_numbers": [
+      "Shopline: 25 REST endpoints, 90% line coverage (bank, self-reported)",
+      "DocQA: 12 retrieval configurations, 60-query test set, Recall@5 65% -> 95%, p50 latency 9.0s -> 3.5s (bank, self-reported)",
+      "tinykv: 0 of 10,000 acknowledged writes lost, 50 SIGKILL faults, 3-node, 80 -> 2,400 writes/s, 1 to 64 clients, 250 ms median failover (bank, self-reported)",
+      "throttle: 4 algorithms, 3 gateway instances, 1,000 req/s shared limit (bank, self-reported)",
+      "Data Analyst Intern: 3 systems, 3 KPIs (bank, self-reported)",
+      "GPA 3.9/4.0 (bank)"
+    ],
+    "questions": [
+      "Do you have US work authorization that will never need sponsorship? If yes, do you want a line in the header saying so? (HM's top ask; the role does not sponsor)",
+      "DocQA: was the 95% Recall@5 measured on queries separate from the ones used to pick among the 12 configurations? If yes, I'll add 'held-out'; if not, I'll rephrase it as the best of 12 configurations.",
+      "Any team project, open-source PR, hackathon, TA or mentoring role? The JD asks for collaboration and leadership, and every line now reads as solo.",
+      "Any responsible-AI work in DocQA (PII redaction, refusing when retrieval confidence is low, hallucination checks), or any frontend/UI work? Both are gaps the HM flagged.",
+      "Dates for Shopline, DocQA and throttle, plus your MS start date? With them I can turn on project dates and explain the time after Jun 2024.",
+      "Is Shopline written in Java, and do you want a phone number in the header?"
+    ],
+    "new_from_projects": [],
+    "warnings": [
+      "2.9 in empty at the bottom of the page: add a relevant true bullet if your bank has one"
+    ],
+    "pdf": true
+  }
+}

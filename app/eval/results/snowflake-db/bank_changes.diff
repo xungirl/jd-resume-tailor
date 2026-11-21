@@ -1,0 +1,79 @@
+--- alex-rivera/resume.toml (before this run)
++++ alex-rivera/resume.toml
+@@ -48,6 +48,18 @@
+ [skills.ai]
+ label = "AI / LLM"
+ text = "RAG, embeddings, retrieval evaluation, tool-calling agents, LLM evaluation harnesses"
++[skills.lang_sfdb]
++label = "Languages"
++text = "Java, Go, SQL, Python"
++[skills.db_sfdb]
++label = "Databases &amp; Backend"
++text = "PostgreSQL, Redis, optimistic concurrency control, Spring Boot, REST, gRPC"
++[skills.cloud_sfdb]
++label = "Cloud"
++text = "AWS (ECS, RDS, S3, IAM), Docker, Terraform, GitHub Actions CI/CD"
++[skills.test_sfdb]
++label = "Stability &amp; Performance Testing"
++text = "fault injection, load testing (p50/p99), Go race detector, JUnit 5"
+ [skills.test]
+ label = "Testing"
+ text = "JUnit 5, pytest, Go race detector, fault injection, load testing (p50/p99)"
+@@ -60,7 +72,10 @@
+ dates = "Oct 2026"
+ [projects.kv.bullets]
+ core = "Built a Raft key-value store in Go (stdlib only): leader election, log replication, and a <b>CRC-checked write-ahead log</b> with fsync and group commit."
++chaos_crash = "Lost <b>0 of 10,000 acked writes</b> in <b>50 SIGKILL process crashes</b>; a chaos harness re-reads every acked key."   # rev1: names the fault type (process kill), same facts as chaos
++chaos_short = "Lost <b>0 of 10,000 acknowledged writes</b> across <b>50 SIGKILL faults</b>; a chaos harness re-reads every acked key."   # shortened from chaos (same facts), Snowflake DB variant
+ chaos = "Lost <b>0 of 10,000 acknowledged writes</b> across <b>50 SIGKILL faults</b> in a chaos harness that reads every acked key back through the log."
++perf_conc = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> as concurrent clients grew from 1 to 64 via group commit; measured <b>250 ms median</b> leader failover."   # reworded from perf (same facts), Snowflake DB variant
+ perf = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> (1 to 64 clients) via group commit; measured <b>250 ms median</b> leader failover."
+ 
+ [projects.gateway]
+@@ -69,6 +84,7 @@
+ url = "https://github.com/example/throttle"
+ [projects.gateway.bullets]
+ algo = "Implemented <b>4 rate-limiting algorithms</b> (token bucket, fixed window, sliding log, sliding counter) behind one interface with in-memory and Redis backends."
++redis_shared = "Used <b>atomic Redis Lua scripts</b> so 3 gateway instances enforced one shared 1,000 req/s limit under load."   # rev1: drops the unmeasured word "exactly" from redis
+ redis = "Used <b>atomic Redis Lua scripts</b> so 3 gateway instances enforced a shared 1,000 req/s limit exactly under load."
+ 
+ [projects.shop]
+@@ -77,6 +93,8 @@
+ url = "https://github.com/example/shopline"
+ [projects.shop.bullets]
+ api = "Designed <b>25 REST endpoints</b> and a normalized PostgreSQL schema for carts, orders and inventory with optimistic locking."
++api_db = "Designed a normalized <b>PostgreSQL schema</b> for carts, orders and inventory with optimistic locking for concurrency control, served by 25 REST endpoints."   # rev1: schema first, same facts as api
++api_conc = "Designed <b>25 REST endpoints</b> and a normalized PostgreSQL schema for carts, orders and inventory, using optimistic locking for concurrency control."   # reworded from api (same facts), Snowflake DB variant
+ test = "Reached <b>90% line coverage</b> with JUnit and Testcontainers; CI on GitHub Actions blocks merges on failing tests."
+ aws = "Deployed with Docker on <b>AWS ECS Fargate</b> behind an ALB with RDS PostgreSQL, defined as code in Terraform."
+ 
+@@ -94,7 +112,7 @@
+ title = "Data Analyst Intern"
+ dates = "Jan 2024 - May 2024"
+ bullets = [
+-  "Wrote <b>SQL</b> pipelines joining 3 operational systems for daily reporting; built dashboards for 3 KPIs used in weekly planning.",
++  "Wrote <b>SQL</b> pipelines joining 3 operational systems for daily reporting; built dashboards for 3 planning KPIs.",
+ ]
+ 
+ # ------------------------------------------------------------------ variants: one per JD family
+@@ -104,6 +122,7 @@
+   { key = "shop", bullets = ["api", "test", "aws"] },
+   { key = "kv", bullets = ["core", "chaos"] },
+   { key = "gateway", bullets = ["algo", "redis"] },
++  { key = "rag", bullets = ["lat", "eval"] },
+ ]
+ 
+ [variants.infra]              # storage / distributed systems / infra, Go shops
+@@ -122,3 +141,12 @@
+   { key = "shop", bullets = ["api", "aws"] },
+   { key = "kv", bullets = ["core", "chaos"] },
+ ]
++
++[variants.snowflake_db]       # Snowflake SWE Intern, Database Engineering (Summer 2027)
++availability = true           # JD lists start/end date options and a 12-week minimum
++skills = ["lang_sfdb", "dist", "db_sfdb", "cloud_sfdb", "test_sfdb"]
++projects = [
++  { key = "kv", bullets = ["core", "chaos_crash", "perf_conc"] },
++  { key = "shop", bullets = ["api_db", "aws", "test"] },
++  { key = "gateway", bullets = ["algo", "redis_shared"] },
++]
