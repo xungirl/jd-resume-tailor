@@ -26,10 +26,33 @@ There is no account and no server. It uses what you already have:
 
 The extension talks to your computer through Chrome's [native messaging](https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging). You register the helper once with `install.sh`, and after that the browser starts it on demand. There's no port, no token, and no password, and only this extension's ID may talk to it.
 
+## Use it in any browser
+
+No extension needed, so you can use it in any browser, Safari included. Install (or update) with one line:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/xungirl/jd-resume-tailor/main/app/get.sh | sh
+```
+
+It clones the repo into `~/jd-resume-tailor`, checks Python and poppler (it tells you `brew install poppler` if that's missing, and doesn't install anything itself), and registers the extension's helper in case you use Chrome too. It never uses sudo, and you can run it again to update.
+
+Then start it:
+
+```sh
+~/jd-resume-tailor/app/jdrt web        # same as: python3 ~/jd-resume-tailor/app/host/jdt.py web
+```
+
+It opens `http://127.0.0.1:8790/#t=…` in your browser (the next free port if 8790 is taken; `--port N` picks one, `--no-open` just prints the link). It's the same panel: paste a posting link and press **Fetch** (Greenhouse, Ashby, Lever, Workday, Oracle and SmartRecruiters links work best), or paste the JD text, then **Tailor my resume**. Keep the terminal open while you use it.
+
+How it keeps other websites out:
+- It listens on 127.0.0.1 only, so nothing else on your network can reach it.
+- Every API call and PDF link needs a random key that's made each time it starts and is only in the link it prints (compared in constant time). Without the key you get 401, with a wrong key 403. The page itself holds no data.
+- It refuses any request whose `Host` isn't `127.0.0.1:PORT` or `localhost:PORT` (so DNS rebinding fails), any `Origin` other than itself, and anything that isn't JSON. It sends no CORS headers, so other pages can't read its answers.
+
 ## Install
 
 You need:
-- Chrome or Edge.
+- Chrome or Edge for the extension, or any browser for `jdrt web` (above).
 - Python 3.9+.
 - poppler: `brew install poppler`.
 - At least one of the agents above.
@@ -107,7 +130,9 @@ Each job lives in `~/.config/jd-resume-tailor/app/jobs/<company_title_hash>/`:
 
 ```sh
 cd app && python3 -m unittest tests/test_host.py -v                    # 18 tests: checks, framing, flows, projects, bank backup, one writer at a time
+python3 -m unittest tests/test_web.py -v                               # 12 tests: the web server's key, Host, Origin, body and PDF checks, fetch_url
 uv run --with playwright==1.55.0 python tests/e2e.py         # 19 checks in a real browser over real native messaging
+uv run --with playwright==1.55.0 python tests/e2e_web.py     # 24 checks: the web UI, from Fetch to the PDF, at desktop and phone width
 ```
 
 Both use `tests/fake_agent.py` in place of the real agents, so they cost nothing and use a made-up person.
@@ -126,10 +151,10 @@ v0.2.0 (beta).
   - It also showed that `pdftotext -bbox` crashes on the builder's PDFs, so the bottom-space check now measures a rendered image instead.
 - Not yet run for real: Codex, Grok Build, DeepSeek.
 - Edge uses the same native messaging and is registered by `install.sh`, but it hasn't been tested.
-- Safari needs a native app wrapper for native messaging, so it isn't supported yet.
+- The Safari extension would need a native app wrapper for native messaging, so use `jdrt web` in Safari instead. The web UI is tested in Chrome for Testing; it uses only standard web APIs, but it hasn't been run in Safari itself yet (`tests/e2e_web.py` also runs in WebKit if Playwright's WebKit is installed).
 
 ## 中文速览
 
-插件负责抓 JD，你电脑上已经登录的 Claude Code、Codex 或 Grok 负责改简历；DeepSeek 只要粘贴一次 key。不需要账号，不需要服务器，也不用配对。第一次运行 `~/jd-resume-tailor/app/install.sh` 完成注册，以后在侧边栏点一下就开始。流程按《JD 简历定制流程》来：写的人看底稿，审的人只看纸面；HM 和 ATS 两个审阅者各自独立，最后过门禁。
+插件负责抓 JD，你电脑上已经登录的 Claude Code、Codex 或 Grok 负责改简历；DeepSeek 只要粘贴一次 key。不需要账号，不需要服务器，也不用配对。第一次运行 `~/jd-resume-tailor/app/install.sh` 完成注册，以后在侧边栏点一下就开始。不想装插件（比如用 Safari）：一行 `curl -fsSL https://raw.githubusercontent.com/xungirl/jd-resume-tailor/main/app/get.sh | sh` 安装，然后 `~/jd-resume-tailor/app/jdrt web`，在任何浏览器里贴链接或 JD 就能用；它只监听 127.0.0.1，每次启动生成一次性密钥，并拒绝其他网站的请求。流程按《JD 简历定制流程》来：写的人看底稿，审的人只看纸面；HM 和 ATS 两个审阅者各自独立，最后过门禁。
 
 MIT License.
