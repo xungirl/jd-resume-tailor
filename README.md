@@ -37,7 +37,9 @@ An agent skill that tailors your resume to each job description by **choosing an
 
 ## Contents
 
-- [Quick start](#quick-start)
+- [Install in one line](#install-in-one-line)
+- [中文安装指南](#中文安装指南)
+- [First run](#first-run)
 - [The rules](#the-rules)
 - [How a run goes](#how-a-run-goes)
 - [What it does for you](#what-it-does-for-you)
@@ -46,55 +48,136 @@ An agent skill that tailors your resume to each job description by **choosing an
 - [Tested](#tested)
 - [Why it works this way](#why-it-works-this-way)
 
-## Quick start
+## Install in one line
 
-### <img src="docs/logos/claude-code.svg" width="22" align="top" alt=""> Claude Code (recommended)
+You need one AI coding agent (Claude Code, OpenAI Codex or DeepSeek Harness) and Python 3.11 or newer. Open a terminal and paste **one** line.
 
-```
-/plugin marketplace add xungirl/jd-resume-tailor
-/plugin install jd-resume-tailor@jd-resume-tailor
-```
-
-Then say: *"tailor my resume for https://job-boards.greenhouse.io/acme/jobs/123"*
-
-### <img src="docs/logos/codex.svg" width="22" align="top" alt=""> OpenAI Codex
+#### <img src="docs/logos/claude-code.svg" width="20" align="top" alt=""> Claude Code: install as a plugin
 
 ```bash
-npx skills add xungirl/jd-resume-tailor --agent codex     # installs to .agents/skills/
-git clone https://github.com/xungirl/jd-resume-tailor.git  # for the resume builder
+claude plugin marketplace add xungirl/jd-resume-tailor && claude plugin install jd-resume-tailor@jd-resume-tailor
 ```
 
-Then ask Codex to tailor your resume for a link. It picks the skill up on its own.
+Already inside Claude Code? Type `/plugin marketplace add xungirl/jd-resume-tailor`, then `/plugin install jd-resume-tailor@jd-resume-tailor`.
 
-### <img src="docs/logos/deepseek.svg" width="22" align="top" alt=""> DeepSeek Harness
-
-DeepSeek Harness (`dsh`) reads skills from `.agents/skills/` too, so the install is the same as for Codex. Put your key in `DEEPSEEK_API_KEY` or `$DSH_HOME/.env`, then:
+#### <img src="docs/logos/codex.svg" width="20" align="top" alt=""> <img src="docs/logos/deepseek.svg" width="20" align="top" alt=""> OpenAI Codex, DeepSeek Harness, or any agent
 
 ```bash
-dsh --profile headless "tailor my resume for <job link>"
+git clone https://github.com/xungirl/jd-resume-tailor ~/jd-resume-tailor && ~/jd-resume-tailor/install.sh
 ```
 
-### Other agents, or hacking on it
+`install.sh` links the skill into `~/.claude/skills/` (Claude Code) and `~/.agents/skills/` (Codex and DeepSeek Harness read this folder), checks for Python and uv, and tells you in plain words what is missing. It installs no packages and writes no config. Use one way or the other for Claude Code, not both, or the skill shows up twice.
 
-`npx skills add xungirl/jd-resume-tailor` installs the skill for any agent that [skills.sh](https://skills.sh) supports. It copies only the skill folder, so clone the repo for the builder.
+**Then restart your agent and say:**
+
+> tailor my resume for https://job-boards.greenhouse.io/acme/jobs/123
+
+For DeepSeek Harness, put your API key in `DEEPSEEK_API_KEY` (or in `~/.dsh/.env`) and run `dsh --profile headless "tailor my resume for <job link>"`, or use its web UI with `dsh web`.
+
+<details>
+<summary><b>New to this? What to install first</b></summary>
+
+<br>
+
+| You need | How to get it | Check it |
+|---|---|---|
+| One agent | [Claude Code](https://claude.com/claude-code) (paid Claude plan), [OpenAI Codex](https://developers.openai.com/codex) (ChatGPT plan), or [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (pay-as-you-go DeepSeek API key) | `claude --version`, `codex --version` or `dsh --version` |
+| Python 3.11+ | [python.org/downloads](https://www.python.org/downloads/), or `brew install python` on macOS | `python3 --version` |
+| git | Comes with macOS developer tools (`xcode-select --install`) | `git --version` |
+| uv (optional) | `curl -LsSf https://astral.sh/uv/install.sh \| sh`. Without it, run `python3 -m pip install reportlab` once. | `uv --version` |
+| poppler (optional) | `brew install poppler`, so the agent can look at the rendered PDF | `pdftoppm -v` |
+
+Tested on macOS. Linux should work the same way. Windows is not tested; use WSL.
+
+</details>
+
+<details>
+<summary><b>Update, uninstall, other ways to install</b></summary>
+
+<br>
+
+| | Plugin (Claude Code) | `install.sh` |
+|---|---|---|
+| Update | `claude plugin marketplace update jd-resume-tailor && claude plugin update jd-resume-tailor@jd-resume-tailor` | `git -C ~/jd-resume-tailor pull` |
+| Uninstall | `claude plugin uninstall jd-resume-tailor@jd-resume-tailor` | `~/jd-resume-tailor/install.sh --uninstall` |
+
+Uninstalling never touches your bullet bank, your PDFs or `~/.config/jd-resume-tailor/`.
+
+`install.sh --claude` links for Claude Code only, `install.sh --agents` for Codex and DeepSeek Harness only.
+
+`npx skills add xungirl/jd-resume-tailor` ([skills.sh](https://skills.sh)) also works for many agents, but it copies only the skill folder, without the resume builder.
+
+Hacking on it:
 
 ```bash
-git clone https://github.com/xungirl/jd-resume-tailor.git && cd jd-resume-tailor
-./install.sh                                    # links the skill into ~/.claude/skills/
-
-cd builder && uv run --with reportlab python build_resume.py example/resume.toml
+cd ~/jd-resume-tailor/builder && uv run --with reportlab python build_resume.py example/resume.toml
 # -> example/out/Alex_Rivera_Resume_{backend,infra,ai}.pdf
-
-python3 ../skills/jd-resume-tailor/fetch_jd.py "https://job-boards.greenhouse.io/<company>/jobs/<id>"
+python3 ~/jd-resume-tailor/skills/jd-resume-tailor/fetch_jd.py "https://job-boards.greenhouse.io/<company>/jobs/<id>"
+python3 ~/jd-resume-tailor/scripts/smoke_test.py
 ```
+
+</details>
+
+## 中文安装指南
+
+**它是什么：** 一个给 AI 编程助手用的「技能」。你贴一个岗位链接，它从你自己的真实经历里挑选、重新排序，生成一页英文简历 PDF。**不会编造任何经历、技能或数字。**
+
+**1. 先准备两样东西**
+
+- 一个 AI 编程助手，三选一：[Claude Code](https://claude.com/claude-code)（要 Claude 付费订阅）、[OpenAI Codex](https://developers.openai.com/codex)（要 ChatGPT 付费账号）、[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek API 按量付费，跑一次很便宜）
+- Python 3.11 或更新的版本。在终端输入 `python3 --version` 就能看到版本号；没有或者太旧的话，去 [python.org](https://www.python.org/downloads/) 下载，Mac 也可以用 `brew install python`
+
+**2. 打开终端，复制一行，回车**
+
+用 Claude Code 的：
+
+```bash
+claude plugin marketplace add xungirl/jd-resume-tailor && claude plugin install jd-resume-tailor@jd-resume-tailor
+```
+
+用 Codex、DeepSeek Harness 或其他助手的：
+
+```bash
+git clone https://github.com/xungirl/jd-resume-tailor ~/jd-resume-tailor && ~/jd-resume-tailor/install.sh
+```
+
+第二行会把技能装到各个助手都能找到的位置，并检查电脑上缺什么。缺东西会直接告诉你怎么装，不会偷偷替你装软件。Claude Code 用户两种方式选一种就行，都装的话技能会出现两次。
+
+**3. 重启助手，说一句话**
+
+> tailor my resume for 岗位链接
+
+也可以说中文：「按这个 JD 改简历：岗位链接」。第一次用时它会问你两件事：**简历在哪**（PDF 或 Word 都可以，它会逐字整理成素材库，不润色、不补数字）和 **PDF 存到哪**。素材库请放在插件文件夹以外，比如 `~/resume/`。
+
+DeepSeek Harness 需要先把 API key 写进 `DEEPSEEK_API_KEY` 环境变量（或者 `~/.dsh/.env` 文件），再运行 `dsh --profile headless "tailor my resume for 岗位链接"`，或者用 `dsh web` 打开网页界面。
+
+**4. 更新和卸载**
+
+- Claude Code：更新用 `claude plugin marketplace update jd-resume-tailor && claude plugin update jd-resume-tailor@jd-resume-tailor`，卸载用 `claude plugin uninstall jd-resume-tailor@jd-resume-tailor`
+- 其他助手：更新用 `git -C ~/jd-resume-tailor pull`，卸载用 `~/jd-resume-tailor/install.sh --uninstall`
+- 卸载不会删你的素材库、PDF 和配置文件
+
+**常见问题**
+
+| 问题 | 回答 |
+|---|---|
+| 提示没有 uv？ | uv 不是必须的。可以按提示装 uv，也可以运行一次 `python3 -m pip install reportlab` |
+| 能抓哪些网站的 JD？ | Greenhouse、Lever、Ashby、Workday、Oracle、SmartRecruiters。LinkedIn、Handshake 或公司自建的招聘页抓不了，把 JD 文字直接粘贴给它就行 |
+| 适合什么简历？ | 美式英文一页简历（US Letter），适合找美国实习和工作 |
+| Windows 能用吗？ | 只在 macOS 上测过，Windows 没测过，建议用 WSL |
+| 简历内容会发给谁？ | 只发给你自己用的那个 AI 助手（Claude、OpenAI 或 DeepSeek）。插件本身不往别处发送任何东西，详见 [What it runs, reads and sends](#what-it-runs-reads-and-sends) |
+
+## First run
+
+Say *"tailor my resume for <job link>"*. The first time, the skill asks where your resume is and where PDFs should go, then saves those paths in `~/.config/jd-resume-tailor/config.md`, which never leaves your machine.
 
 > [!TIP]
-> **Only have a PDF or Word resume?** Say so on the first run. The skill copies it into a bullet bank word for word (no polishing, no invented numbers), rebuilds your current resume from the bank so you can check nothing changed, and tailors from there.
+> **Only have a PDF or Word resume?** That's fine. The skill copies it into a bullet bank word for word (no polishing, no invented numbers), rebuilds your current resume from the bank so you can check nothing changed, and tailors from there.
 
 > [!IMPORTANT]
-> Keep your bullet bank **outside the plugin folder** (for example `~/resume/resume.toml`). Plugin updates replace that folder. Your paths go in `~/.config/jd-resume-tailor/config.md` (template: `config.example.md`), which never leaves your machine.
+> Keep your bullet bank **outside the plugin or clone folder** (for example `~/resume/resume.toml`). Plugin updates replace that folder.
 
-**Requirements:** Python 3.11+ and `reportlab` ([uv](https://docs.astral.sh/uv/) pulls it in). Optional: `pdftoppm` (poppler), so the agent can look at the rendered page. Fonts are embedded in the PDF: Arial on macOS/Windows, Liberation Sans on Linux, or Carlito if you set `FONT_DIR`. Already have your own resume script? Keep it, and point the config at it. The skill only needs to know how to add a variant and run a build.
+Already have your own resume script? Keep it, and point the config at it (template: `config.example.md`). The skill only needs to know how to add a variant and run a build. Fonts are embedded in the PDF: Arial on macOS/Windows, Liberation Sans on Linux, or Carlito if you set `FONT_DIR`.
 
 ## The rules
 
@@ -160,6 +243,7 @@ jd-resume-tailor/
 │   ├── build_resume.py     one-page builder: fails on overflow, embeds fonts
 │   └── example/resume.toml example bullet bank with 3 variants (fictional person)
 ├── scripts/smoke_test.py   live check of all 6 ATSs, a closed posting, and the builder
+├── install.sh              one-line installer: links the skill for Claude Code, Codex, DeepSeek Harness
 ├── config.example.md       template for your personal config
 └── .claude-plugin/         plugin and marketplace manifests
 ```
