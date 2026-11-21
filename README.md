@@ -316,7 +316,14 @@ Sending one generic resume everywhere is the default, and it works badly: the pr
 - **Safe with your bank.** Your bullet bank is backed up before every run, and you can undo the run's changes in one click.
 - **Your repos too.** It can mine your project repos for projects that aren't on your resume yet, using only facts found in their files.
 
-See [app/README.md](app/README.md).
+Try it:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/xungirl/jd-resume-tailor/main/app/get.sh | sh
+~/jd-resume-tailor/app/jdrt web      # a local page in any browser; or load app/extension in Chrome/Edge
+```
+
+Watch real runs at [xungirl.com/jd-resume-tailor](https://xungirl.com/jd-resume-tailor/). Details are in [app/README.md](app/README.md).
 
 ## License
 
