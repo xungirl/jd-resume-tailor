@@ -12,6 +12,7 @@
   <img alt="6 ATSs supported" src="https://img.shields.io/badge/ATS-6%20supported-805ad5?style=flat-square">
   <img alt="Tested end to end on 3 agents" src="https://img.shields.io/badge/tested-3%20agents-dd6b20?style=flat-square">
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776ab?style=flat-square&logo=python&logoColor=white">
+  <a href="https://claudemarketplaces.com/skills/xungirl/jd-resume-tailor/jd-resume-tailor"><img alt="Listed on Claude Marketplaces" src="https://img.shields.io/badge/listed%20on-claudemarketplaces.com-d97757?style=flat-square"></a>
 </p>
 
 <table align="center">
