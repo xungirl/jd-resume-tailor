@@ -21,8 +21,16 @@ class Page(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    frame_url = ''
+
     def do_GET(self):
-        body = (ROOT / 'tests' / 'fixtures' / 'job.html').read_bytes()
+        fx = ROOT / 'tests' / 'fixtures'
+        if self.path == '/embed':
+            body = (fx / 'embed_top.html').read_text().replace('FRAME_URL', Page.frame_url).encode()
+        elif self.path == '/frame':
+            body = (fx / 'embed_frame.html').read_bytes()
+        else:
+            body = (fx / 'job.html').read_bytes()
         self.send_response(200)
         self.send_header('Content-Type', 'text/html; charset=utf-8')
         self.end_headers()
@@ -59,7 +67,7 @@ def main():
     ext = tmp / 'ext'
     shutil.copytree(ROOT / 'extension', ext)
     man = json.loads((ext / 'manifest.json').read_text())
-    man['host_permissions'] = ['http://127.0.0.1/*']  # read the local fixture page without the permission prompt
+    man['host_permissions'] = ['http://127.0.0.1/*', 'http://localhost/*']  # read the local fixture page without the permission prompt
     # Without "tabs", Chrome hides tab URLs from the panel and it shows "Open a job posting" on every page.
     assert 'tabs' in man['permissions'], 'the panel needs the "tabs" permission to see which page is open'
     (ext / 'manifest.json').write_text(json.dumps(man))
@@ -67,6 +75,8 @@ def main():
     srv = ThreadingHTTPServer(('127.0.0.1', 0), Page)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     job_url = f'http://127.0.0.1:{srv.server_address[1]}/job'
+    embed_url = f'http://127.0.0.1:{srv.server_address[1]}/embed'
+    Page.frame_url = f'http://localhost:{srv.server_address[1]}/frame'  # another origin, like an embedded Greenhouse board
 
     fails = []
 
@@ -130,6 +140,21 @@ def main():
             panel.reload()
             panel.wait_for_function("() => document.getElementById('jobBadge').textContent === 'ready'", timeout=10000)
             check('finds the job again for this page after reopening', True)
+
+            # a career page whose posting sits in an iframe from another site (Wing-style Greenhouse embed)
+            emb = ctx.new_page()
+            emb.goto(embed_url)
+            emb.wait_for_timeout(500)
+            emb_id = sw.evaluate('async (u) => (await chrome.tabs.query({url: u}))[0].id', embed_url)
+            panel.goto(f'chrome-extension://{eid}/panel.html?tab={emb_id}')
+            panel.wait_for_function("() => !document.getElementById('capture').disabled", timeout=10000)
+            panel.click('#capture')
+            panel.wait_for_function("() => document.getElementById('jdLen').textContent.includes('words')", timeout=5000)
+            jd = panel.locator('#jd').input_value()
+            check('reads the posting from the embedded frame, not the nav and footer',
+                  'Minimum qualifications' in jd and 'Get delivery' not in jd, jd[:150])
+            check('frame capture keeps the page URL', panel.locator('#pageTitle').text_content().startswith('Data Infra'),
+                  panel.locator('#pageTitle').text_content())
             check('no page errors', not errors, '; '.join(errors))
         finally:
             ctx.close()

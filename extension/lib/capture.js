@@ -46,5 +46,9 @@ export function captureJob() {
   out.company = out.company || (co ? co.innerText.trim() : '') ||
     (document.querySelector('meta[property="og:site_name"]') || {}).content || '';
   out.text = out.text.slice(0, 60000);
+  // Embedded job boards (Greenhouse, Lever, Ashby...) often sit in an iframe from another site.
+  out.frames = [...new Set([...document.querySelectorAll('iframe[src]')].map((f) => {
+    try { return new URL(f.src, location.href).origin; } catch (e) { return ''; }
+  }).filter((o) => /^https?:/.test(o) && o !== location.origin))];
   return out;
 }

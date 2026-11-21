@@ -154,32 +154,59 @@ function refreshButtons() {
   $('tailor').disabled = busy || !H || $('jd').value.trim().length < 200;
 }
 
+// How much a capture looks like a job description.
+const JD_WORDS = /responsibilit|qualification|requirement|what you('|’)ll|you will|about the (role|team|program|job)|minimum|preferred|experience with|we('|’)re looking for/gi;
+function score(r) {
+  if (!r || !r.text) return 0;
+  return (r.how === 'json-ld' ? 1e6 : 0) + ((r.text.match(JD_WORDS) || []).length * 1000) + Math.min(r.text.length, 20000);
+}
+const looksLikeJD = (r) => r && (r.how === 'json-ld' || (r.text.length >= 600 && (r.text.match(JD_WORDS) || []).length >= 2));
+
+async function capture(target) {
+  return (await chrome.scripting.executeScript({ target, func: captureJob })).map((x) => x.result).filter(Boolean);
+}
+
+function askAccess(origins, label) {
+  note(`JD Tailor needs your OK to read ${label}.`, 'blue');
+  const b = document.createElement('button');
+  b.textContent = 'Allow'; b.className = 'primary small'; b.style.marginLeft = '8px';
+  b.onclick = () => chrome.permissions.request({ origins: origins.map((o) => o + '/*') }).then((ok) => {
+    if (!ok) return note('Not allowed. You can still paste the job description below.', 'red');
+    note('');
+    $('capture').click();
+  });
+  $('pageMsg').appendChild(b);
+}
+
 $('capture').onclick = async () => {
   tab = await activeTab();
   if (!isWeb(tab)) return;
   note('');
-  let got;
+  const top = new URL(tab.url).origin;
+  let best;
   try {
-    got = (await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: captureJob }))[0].result;
+    best = (await capture({ tabId: tab.id }))[0];
   } catch (e) {
-    // No access to this site yet. Ask with a button of its own, so the request comes from a direct click.
-    const origin = new URL(tab.url).origin + '/*';
-    note(`JD Tailor needs your OK to read ${new URL(tab.url).hostname}.`, 'blue');
-    const b = document.createElement('button');
-    b.textContent = 'Allow on this site'; b.className = 'primary small'; b.style.marginLeft = '8px';
-    b.onclick = () => chrome.permissions.request({ origins: [origin] }).then((ok) => {
-      if (!ok) return note('Not allowed. You can still paste the job description below.', 'red');
-      note('');
-      $('capture').click();
-    });
-    $('pageMsg').appendChild(b);
-    return;
+    return askAccess([top], new URL(tab.url).hostname);
   }
-  if (!got || got.text.length < 200) {
+  if (!looksLikeJD(best) && best && best.frames && best.frames.length) {
+    // The posting is probably in an embedded frame: read every frame we may read and keep the best.
+    try {
+      for (const r of await capture({ tabId: tab.id, allFrames: true })) if (score(r) > score(best)) best = { ...r, url: best.url, frames: best.frames };
+    } catch (e) { /* frames we can't read yet */ }
+    if (!looksLikeJD(best)) {
+      const missing = [];
+      for (const o of best.frames) if (!(await chrome.permissions.contains({ origins: [o + '/*'] }))) missing.push(o);
+      if (missing.length) return askAccess(missing, 'the job board embedded in this page (' + missing.map((o) => new URL(o).hostname).join(', ') + ')');
+    }
+  }
+  if (!best || best.text.length < 200 || !looksLikeJD(best)) {
     $('jdBox').open = true;
-    return note('Could not find a job description on this page. Select the posting text and press Capture again, or paste it below.');
+    if (best && best.text.length >= 200) { job = { ...best, tabUrl: tab.url }; $('jd').value = best.text; showJobInfo(); refreshButtons(); }
+    return note('This doesn\'t look like a job description. Select the posting text on the page and press Capture again, or paste it below.');
   }
-  job = { ...got, tabUrl: tab.url };
+  job = { ...best, tabUrl: tab.url };
+  if (!job.title || job.title === document.title) job.title = tab.title || job.title;
   $('jd').value = job.text;
   showJobInfo();
   refreshButtons();
