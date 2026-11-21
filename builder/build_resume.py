@@ -84,6 +84,7 @@ def build(data, name, spec, outdir):
         'body': ParagraphStyle('body', fontName=FONT['regular'], fontSize=BODY, leading=LEADING, textColor=BLACK),
         'contact': ParagraphStyle('contact', fontName=FONT['regular'], fontSize=9.6, leading=12, alignment=1, textColor=BLACK),
         'title': ParagraphStyle('title', fontName=FONT['bold'], fontSize=22, leading=24, alignment=1, textColor=BLACK),
+        'right': ParagraphStyle('right', fontName=FONT['regular'], fontSize=BODY, leading=LEADING, alignment=2, textColor=BLACK),
     }
     c = canvas.Canvas(str(out), pagesize=(WIDTH, HEIGHT), pageCompression=1, initialFontName=FONT['regular'])
     c.setTitle(f"{data['profile']['name']} Resume")
@@ -147,12 +148,27 @@ def build(data, name, spec, outdir):
         y[0] -= 2.5
         # tags: 2-3 core words after the title ("Go · Raft Consensus"); a variant can re-pick them per JD
         tags = spec.get('tags', {}).get(p['key'], proj.get('tags'))
-        if tags:
-            head = f"<b>{proj['name']}: {proj['desc']}</b> | <i>{tags}</i>"
+        links = [(proj['url'], proj.get('url_label', 'GitHub'))] if proj.get('url') else []
+        if proj.get('live'):
+            links.append((proj['live'], proj.get('live_label', 'Live')))
+        if spec.get('project_dates'):
+            # dates take the right column, so links stay inline
+            head = f"<b>{proj['name']}</b> | <i>{proj['desc']}</i>" + (f" | <i>{tags}</i>" if tags else '')
+            head += ''.join(' | ' + link(u, l) for u, l in links)
+            row(head, proj.get('dates', ''), gap=1)
         else:
-            head = f"<b>{proj['name']}</b> | <i>{proj['desc']}</i>"
-        head += ' | ' + link(proj['url'], proj.get('url_label', 'GitHub')) if proj.get('url') else ''
-        row(head, proj.get('dates', '') if spec.get('project_dates') else '', gap=1)
+            # bold name — regular description | italic tags, links right-aligned like the date column above
+            head = f"<b>{proj['name']}</b> — {proj['desc']}" + (f" | <i>{tags}</i>" if tags else '')
+            plain = ' · '.join(l for _, l in links)
+            rw = pdfmetrics.stringWidth(plain, FONT['regular'], BODY) if links else 0
+            hp = Paragraph(head, st['body']); _, h = hp.wrap(TEXT_WIDTH - rw - (14 if links else 0), HEIGHT)
+            if h > LEADING + .1:
+                warnings.append(f"heading wraps: {proj['name']} - shorten desc or tags")
+            hp.drawOn(c, LEFT, y[0] - h)
+            if links:
+                rp = Paragraph(' · '.join(link(u, l) for u, l in links), st['right']); _, hr = rp.wrap(rw + 4, HEIGHT)
+                rp.drawOn(c, RIGHT - rw - 4, y[0] - hr)
+            y[0] -= max(h, LEADING) + 1
         for b in p['bullets']:
             if b not in proj['bullets']:
                 raise SystemExit(f"variant {name}: project {p['key']} has no bullet '{b}' (have: {', '.join(proj['bullets'])})")

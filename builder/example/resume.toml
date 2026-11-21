@@ -60,6 +60,7 @@ name = "tinykv"
 desc = "Raft-Replicated Key-Value Store"
 tags = "Go · Raft Consensus"
 url = "https://github.com/example/tinykv"
+live = "https://example.com/tinykv/"         # optional: demo or project page, shown as "Live"
 dates = "Oct 2026"
 [projects.kv.bullets]
 core = "Built a Raft key-value store in Go (stdlib only): leader election, log replication, and a <b>CRC-checked write-ahead log</b> with fsync and group commit."
