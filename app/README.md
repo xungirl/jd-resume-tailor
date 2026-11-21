@@ -1,4 +1,4 @@
-# JD Tailor
+# JD Resume Tailor
 
 A browser extension that reads the job description on the page you're on and has the AI agent already on your computer tailor your resume to it. Then two blind reviewers check the result before you see it.
 
@@ -15,7 +15,7 @@ A browser extension that reads the job description on the page you're on and has
 
 ## One login, or none
 
-There is no JD Tailor account and no server. It uses what you already have:
+There is no account and no server. It uses what you already have:
 
 | Agent | What it needs |
 |---|---|
@@ -38,17 +38,17 @@ You need:
 Then:
 
 ```sh
-git clone <this repo> ~/jd-tailor
-~/jd-tailor/install.sh          # registers the helper, then prints what it found
+git clone https://github.com/xungirl/jd-resume-tailor ~/jd-resume-tailor
+~/jd-resume-tailor/app/install.sh          # registers the helper, then prints what it found
 ```
 
 Load the extension:
 1. Open `chrome://extensions` (or `edge://extensions`) and turn on Developer mode.
-2. Click **Load unpacked** and pick `~/jd-tailor/extension`.
+2. Click **Load unpacked** and pick `~/jd-resume-tailor/app/extension`.
 3. Click the toolbar icon. The side panel lists your agents.
    - Pick who **writes** and who **reviews**. A different reviewer catches more.
 
-`~/jd-tailor/host/jdt.py doctor` shows the same status from the terminal.
+`~/jd-resume-tailor/app/host/jdt.py doctor` shows the same status from the terminal.
 
 ## The flow
 
@@ -79,7 +79,7 @@ writer (your bank) ──> analysis.md + resume.pdf ──> script checks ──
   - Each project gets a one-paragraph summary: languages, README, last commit, and whether your bank already has it.
   - The writer may add a project that isn't on your resume yet, using only facts it verifies in that project's files. It cites the file for each fact and lists every new bullet so you can check it.
   - Repos are read-only to the writer (Claude Code gets `Edit`/`Write` denied there), and reviewers never see them.
-- **Reset** stops a run and moves the job's folder to `~/.config/jd-tailor/trash/`, so you can start that posting over.
+- **Reset** stops a run and moves the job's folder to `~/.config/jd-resume-tailor/app/trash/`, so you can start that posting over.
 - **Models.** You pick the model for the writer and for the reviewers. The default is the agent's best: Opus for Claude Code, V4 Pro for DeepSeek. Codex and Grok use their own defaults unless you name a model.
 - **Quick or thorough.**
   - Quick (the default) runs one round of reviews and one revision.
@@ -97,7 +97,7 @@ writer (your bank) ──> analysis.md + resume.pdf ──> script checks ──
 
   You answer in the panel, and it starts over with your answer. A "no visa sponsorship" posting is not a stop: it builds anyway and tells you.
 
-Each job lives in `~/.config/jd-tailor/jobs/<company_title_hash>/`:
+Each job lives in `~/.config/jd-resume-tailor/app/jobs/<company_title_hash>/`:
 - `jd.md`, `analysis.md`, `resume.pdf`, `resume_source.md`, `notes.md`
 - every review as `review_hm_1.md`, `review_ats_1.md`, …
 - `state.json`, `result.json`
@@ -106,8 +106,8 @@ Each job lives in `~/.config/jd-tailor/jobs/<company_title_hash>/`:
 ## Tests
 
 ```sh
-cd app && python3 -m unittest tests/test_host.py -v                    # 10 tests: checks, framing, the whole flow, questions
-uv run --with playwright==1.55.0 python tests/e2e.py         # 14 checks in a real browser over real native messaging
+cd app && python3 -m unittest tests/test_host.py -v                    # 18 tests: checks, framing, flows, projects, bank backup, one writer at a time
+uv run --with playwright==1.55.0 python tests/e2e.py         # 19 checks in a real browser over real native messaging
 ```
 
 Both use `tests/fake_agent.py` in place of the real agents, so they cost nothing and use a made-up person.
@@ -117,7 +117,7 @@ Both use `tests/fake_agent.py` in place of the real agents, so they cost nothing
 
 ## Status
 
-v0.2.0.
+v0.2.0 (beta).
 - Tested: Chrome for Testing, with a fake agent.
 - One live Claude Code run, on the made-up person from jd-resume-tailor's example bank, against the test JD:
   - It ran writer → checks → HM 1 (yes) + ATS 1 (pass) → revise → HM 2 (yes) → revise → gate passed.
@@ -130,6 +130,6 @@ v0.2.0.
 
 ## 中文速览
 
-插件负责抓 JD，你电脑上已经登录的 Claude Code、Codex 或 Grok 负责改简历；DeepSeek 只要粘贴一次 key。不需要账号，不需要服务器，也不用配对。第一次运行 `~/jd-tailor/install.sh` 完成注册，以后在侧边栏点一下就开始。流程按《JD 简历定制流程》来：写的人看底稿，审的人只看纸面；HM 和 ATS 两个审阅者各自独立，最后过门禁。
+插件负责抓 JD，你电脑上已经登录的 Claude Code、Codex 或 Grok 负责改简历；DeepSeek 只要粘贴一次 key。不需要账号，不需要服务器，也不用配对。第一次运行 `~/jd-resume-tailor/app/install.sh` 完成注册，以后在侧边栏点一下就开始。流程按《JD 简历定制流程》来：写的人看底稿，审的人只看纸面；HM 和 ATS 两个审阅者各自独立，最后过门禁。
 
 MIT License.
