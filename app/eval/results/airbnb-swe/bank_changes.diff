@@ -1,0 +1,70 @@
+--- alex-rivera/resume.toml (before this run)
++++ alex-rivera/resume.toml
+@@ -51,6 +51,19 @@
+ [skills.test]
+ label = "Testing"
+ text = "JUnit 5, pytest, Go race detector, fault injection, load testing (p50/p99)"
++# trimmed lines for airbnb_swe: subsets of the lines above (plus tools named in bullets), no unused skills
++[skills.backend_ab]
++label = "Backend"
++text = "REST, Spring Boot, FastAPI, PostgreSQL, Redis"
++[skills.cloud_ab]
++label = "Cloud &amp; DevOps"
++text = "AWS (ECS, RDS), Docker, GitHub Actions CI/CD, Terraform"
++[skills.ai_ab]
++label = "AI / LLM"
++text = "RAG, embeddings, retrieval evaluation, LLM (large language model) evaluation harnesses"
++[skills.test_ab]
++label = "Testing"
++text = "JUnit 5, Testcontainers, pytest, fault injection, chaos testing, load testing (p50/p99)"
+ 
+ # ------------------------------------------------------------------ projects: bullet bank
+ [projects.kv]
+@@ -62,6 +75,8 @@
+ core = "Built a Raft key-value store in Go (stdlib only): leader election, log replication, and a <b>CRC-checked write-ahead log</b> with fsync and group commit."
+ chaos = "Lost <b>0 of 10,000 acknowledged writes</b> across <b>50 SIGKILL faults</b> in a chaos harness that reads every acked key back through the log."
+ perf = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> (1 to 64 clients) via group commit; measured <b>250 ms median</b> leader failover."
++perf_ab = "Raised 3-node throughput from <b>80 to 2,400 writes/s</b> (1 to 64 clients) via group commit; <b>250 ms median</b> failover."   # = perf reworded, keeps the load setup (airbnb_swe r1)
++perf_s = "Scaled a 3-node cluster from <b>80 to 2,400 writes/s</b> via group commit; measured <b>250 ms median</b> leader failover."   # = perf minus client counts (airbnb_swe)
+ 
+ [projects.gateway]
+ name = "throttle"
+@@ -70,6 +85,7 @@
+ [projects.gateway.bullets]
+ algo = "Implemented <b>4 rate-limiting algorithms</b> (token bucket, fixed window, sliding log, sliding counter) behind one interface with in-memory and Redis backends."
+ redis = "Used <b>atomic Redis Lua scripts</b> so 3 gateway instances enforced a shared 1,000 req/s limit exactly under load."
++redis_ab = "Used <b>atomic Redis Lua scripts</b> so 3 gateway instances enforced one shared 1,000 req/s limit under load."   # = redis without "exactly" (airbnb_swe r1)
+ 
+ [projects.shop]
+ name = "Shopline"
+@@ -78,6 +94,7 @@
+ [projects.shop.bullets]
+ api = "Designed <b>25 REST endpoints</b> and a normalized PostgreSQL schema for carts, orders and inventory with optimistic locking."
+ test = "Reached <b>90% line coverage</b> with JUnit and Testcontainers; CI on GitHub Actions blocks merges on failing tests."
++api_s = "Designed <b>25 REST endpoints</b> and a PostgreSQL schema for carts, orders and inventory with optimistic locking."   # = api minus "normalized" (fits 1 line+; airbnb_swe)
+ aws = "Deployed with Docker on <b>AWS ECS Fargate</b> behind an ALB with RDS PostgreSQL, defined as code in Terraform."
+ 
+ [projects.rag]
+@@ -94,7 +111,7 @@
+ title = "Data Analyst Intern"
+ dates = "Jan 2024 - May 2024"
+ bullets = [
+-  "Wrote <b>SQL</b> pipelines joining 3 operational systems for daily reporting; built dashboards for 3 KPIs used in weekly planning.",
++  "Wrote <b>SQL</b> pipelines joining 3 systems for daily reporting; built dashboards for 3 KPIs used in weekly planning.",
+ ]
+ 
+ # ------------------------------------------------------------------ variants: one per JD family
+@@ -122,3 +139,13 @@
+   { key = "shop", bullets = ["api", "aws"] },
+   { key = "kv", bullets = ["core", "chaos"] },
+ ]
++
++[variants.airbnb_swe]         # Airbnb SWE Intern (BS/MS): product backend + AI awareness
++availability = true           # JD gives fixed program dates (May 24 - Aug 13, 2027)
++skills = ["lang_java", "backend_ab", "ai_ab", "test_ab", "cloud_ab"]
++projects = [
++  { key = "shop", bullets = ["api_s", "test", "aws"] },
++  { key = "rag", bullets = ["eval", "lat"] },
++  { key = "kv", bullets = ["core", "chaos", "perf_ab"] },
++  { key = "gateway", bullets = ["algo", "redis_ab"] },
++]

@@ -216,6 +216,7 @@ class Flow(unittest.TestCase):
         calls = (d / 'calls.log').read_text().splitlines()
         self.assertEqual([c.split(' |')[0] for c in calls], ['ROLE: writer', 'ROLE: writer (revision 1)', 'ROLE: writer (revision 2)'])
         self.assertIn('Revised:', j['result']['summary'])
+        self.assertEqual(sorted(p.name for p in (d / 'versions').glob('*.pdf')), ['1_write.pdf', '2_revise1.pdf', '3_revise2.pdf'])
         self.assertEqual(jdt.handle({'cmd': 'find', 'url': 'https://example.com/jobs/1'})['job']['id'], j['id'])
         self.assertTrue(jdt.handle({'cmd': 'pdf', 'id': j['id']})['b64'].startswith('JVBERi0'))
         self.assertIn('Direction: backend', jdt.handle({'cmd': 'review', 'id': j['id'], 'name': 'analysis'})['text'])

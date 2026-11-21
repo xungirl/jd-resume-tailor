@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "pages": 1,
+  "failures": [],
+  "warnings": [
+    "3.3 in empty at the bottom of the page: add a relevant true bullet if your bank has one"
+  ],
+  "keywords": {
+    "Python": 1,
+    "PyTorch": 0,
+    "TensorFlow": 0,
+    "machine learning": 0,
+    "deep learning": 0,
+    "computer vision": 0,
+    "graph neural networks": 0,
+    "natural language processing/NLP": 1,
+    "large language models/LLM": 3,
+    "vision-language models": 0,
+    "labeled dataset": 0,
+    "baselines/baseline": 1,
+    "experiments": 3,
+    "evaluation/evaluate": 2,
+    "pipelines/pipeline": 2,
+    "data structures": 0,
+    "algorithms": 2,
+    "statistics": 0,
+    "Git": 1,
+    "Docker": 2,
+    "Linux": 0,
+    "GPU": 0,
+    "cloud/AWS": 3,
+    "C++": 0,
+    "CUDA": 0,
+    "AI coding tools": 0,
+    "CAD": 0,
+    "3D geometry": 0,
+    "engineering drawings": 0,
+    "manufacturing data": 0
+  },
+  "bottom_gap_in": 3.28
+}

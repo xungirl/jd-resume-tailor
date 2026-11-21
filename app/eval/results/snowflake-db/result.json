@@ -1,0 +1,68 @@
+{
+  "gate": "pass",
+  "hm": "yes",
+  "ats": "pass",
+  "direction": "infra",
+  "lead": "tinykv (Raft-replicated key-value store with a CRC-checked write-ahead log, crash-tested with SIGKILL, throughput under concurrent clients). It answers 'FoundationDB key-value store (FDB storage, FDB Performance)', 'Large-scale distributed systems', 'Software frameworks for stability and performance testing' and 'Systems programming skills including multi-threading, concurrency'",
+  "summary": "Revision 1 stays one page and passes check.py. The tinykv crash test now states its setup (SIGKILL process crashes), the Shopline bullet leads with the PostgreSQL schema and optimistic concurrency control, 'exactly' is gone, and DocQA and the lone project date are dropped. The remaining HM asks (OS coursework, C++/Java systems work, teamwork, benchmark controls, phone number) are not in the bank, so they are listed as gaps and questions.",
+  "gaps": [
+    "C++",
+    "C++17/C++20",
+    "Java 17/Java 20 (no version in the bank)",
+    "multi-threading (concurrency is shown, threads are not)",
+    "data structures",
+    "operating systems (required coursework, not listed)",
+    "software engineering coursework",
+    "big data",
+    "Spark",
+    "Hadoop",
+    "query execution",
+    "query optimization",
+    "compilers",
+    "transaction processing",
+    "FoundationDB",
+    "Azure/Google Cloud",
+    "open source",
+    "teamwork (all projects read as solo)",
+    "research/publications in databases or distributed systems",
+    "tinykv durability beyond process crashes (no power-loss or fsync-off control run)",
+    "tinykv benchmark setup (no hardware, no group-commit-off comparison, no failover trial count or p99)"
+  ],
+  "constraints": [
+    "Onsite: 'Required to work from designated office full time' in Menlo Park, CA (resume says Seattle, WA; relocation is not stated)",
+    "Must be actively enrolled during the internship (MS expected Dec 2027: OK)",
+    "Start date options May 10 / May 24 / June 21, 2027; 12-week minimum, 16 recommended (availability line says 12 weeks)",
+    "The JD says nothing about sponsorship"
+  ],
+  "dropped": [
+    "DocQA project (both bullets): off-topic for a DB engine; the HM flagged Recall@5 on 60 queries as overfit",
+    "project dates: only tinykv had one (Oct 2026); hidden for consistency until the other projects have dates",
+    "'exactly' from the throttle Redis bullet: no error measurement in the bank",
+    "AI/LLM skills line: unrelated to database engineering",
+    "Kubernetes, TypeScript, FastAPI, WebSockets, pytest from the skills lines: not relevant to this JD"
+  ],
+  "unverified_numbers": [
+    "GPA 3.9/4.0 (bank, education)",
+    "0 of 10,000 acked writes lost in 50 SIGKILL crashes (bank, tinykv.chaos)",
+    "80 to 2,400 writes/s, 1 to 64 clients, 3-node cluster, 250 ms median failover (bank, tinykv.perf)",
+    "25 REST endpoints (bank, shop.api)",
+    "90% line coverage (bank, shop.test)",
+    "4 rate-limiting algorithms; 3 gateway instances sharing a 1,000 req/s limit (bank, gateway.algo/redis)",
+    "3 operational systems, 3 KPIs (bank, experience)"
+  ],
+  "questions": [
+    "Did you take Operating Systems, Data Structures or Software Engineering (BS or MS, or planned before summer)? All three are required by the JD and missing from the coursework line.",
+    "Add a phone number to the profile? The ATS phone field is empty. The builder template supports it through the profile, so nothing in the template needs to change.",
+    "Dates for Shopline, throttle (and DocQA)? With them I can turn project dates back on for every project.",
+    "Is Shopline written in Java, and which version (17/21)? Saying so would strengthen the JD's main language requirement.",
+    "Do you have numbers for tinykv with group commit off, the hardware setup (one machine vs. several), failover trial count or p99, or a power-loss or fsync-off test? The HM asked for each of these.",
+    "Any team project, code review or open-source contribution? Teamwork has no evidence now.",
+    "Can you do 16 weeks and relocate to Menlo Park? That belongs on the form; I won't put it on the resume unless you ask.",
+    "The page has 3.5 in empty after dropping DocQA. Keep it tight, or restore the DocQA latency bullet?"
+  ],
+  "new_from_projects": [],
+  "warnings": [
+    "3.5 in empty at the bottom of the page: add a relevant true bullet if your bank has one"
+  ],
+  "pdf": true
+}

@@ -1,0 +1,31 @@
+{
+  "slug": "roblox-engine",
+  "why": "stretch: C++ engine work the bank does not show",
+  "url": "https://careers.roblox.com/jobs/8386080?gh_jid=8386080",
+  "company": "Roblox",
+  "title": "[Summer 2027 Canada] Software Engineer Intern, Engine",
+  "status": "skip",
+  "gate": "n/a",
+  "hm": null,
+  "ats": null,
+  "mode": "quick",
+  "stages": [
+    "write"
+  ],
+  "seconds": 40.0,
+  "cost_usd": 0.42,
+  "numbers_not_in_bank": [],
+  "terms_not_in_bank": [],
+  "gaps": [
+    "C++",
+    "real-time computer graphics/rendering",
+    "DirectX/Vulkan/Metal/OpenGL",
+    "physics/rigid body dynamics/fluid simulations",
+    "3D math/numerical methods",
+    "game engine"
+  ],
+  "questions": [
+    "If you can work in Canada and still want this engine role, you'd need a real C++ graphics or physics project in the bank first. Do you want to build one?"
+  ],
+  "bank_changed": false
+}

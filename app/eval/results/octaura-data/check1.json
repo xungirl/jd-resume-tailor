@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "pages": 1,
+  "failures": [],
+  "warnings": [
+    "3.5 in empty at the bottom of the page: add a relevant true bullet if your bank has one"
+  ],
+  "keywords": {
+    "Computer Science": 1,
+    "data engineering": 1,
+    "metrics dashboard/metrics dashboards/dashboards": 3,
+    "data analysis": 1,
+    "GenAI": 2,
+    "search": 3,
+    "protocol": 1,
+    "real-time data/real-time": 0,
+    "market data": 0,
+    "trading": 0,
+    "fintech": 0,
+    "communication": 0
+  },
+  "bottom_gap_in": 3.5
+}

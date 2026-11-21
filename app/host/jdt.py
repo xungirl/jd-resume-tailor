@@ -749,6 +749,13 @@ def write_run(job: Job, cfg: dict, prompt: str, key: str, label: str) -> dict:
     diff = bank_diff(job)
     (job.d / 'bank_changes.diff').write_text(diff)
     st['bank_changed'] = bool(diff)
+    if (job.d / 'resume.pdf').exists():  # keep every draft, so you (and the demo) can compare them
+        v = job.d / 'versions'
+        v.mkdir(exist_ok=True)
+        n = len(list(v.glob('*.pdf'))) + 1
+        shutil.copy2(job.d / 'resume.pdf', v / f'{n}_{key}.pdf')
+        if (job.d / 'resume_source.md').exists():
+            shutil.copy2(job.d / 'resume_source.md', v / f'{n}_{key}.md')
     if res['session']:
         st['session'] = res['session']
     st['cost'] = (st.get('cost') or 0) + (res['cost'] or 0)
@@ -821,6 +828,8 @@ PROJECTS_NOTE = """
 def flow(job: Job, cfg: dict):
     st = job.state
     st.update(status='running', started=now(), error='', stages=[], cost=0, pid=os.getpid())
+    if (job.d / 'versions').exists():
+        shutil.rmtree(job.d / 'versions')
     job.save()
     job.plan([('write', 'Analysis and first draft'), ('check', 'Script checks'), ('hm1', 'Hiring manager review 1'),
               ('ats1', 'ATS review 1'), ('revise1', 'Revise after round 1'), ('gate', 'Gate')])
