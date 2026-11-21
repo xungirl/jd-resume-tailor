@@ -9,7 +9,7 @@ Goal: for one job posting, produce the strongest **honest** one-page resume the 
 
 ## 0. Setup (read first)
 
-Look for the user's config at `$JD_RESUME_TAILOR_CONFIG` if that variable is set (`echo $JD_RESUME_TAILOR_CONFIG`; tools like jd-apply set it for unattended runs), otherwise at `~/.config/jd-resume-tailor/config.md`. It says where their bullet bank lives, how to build, where PDFs go, and (optionally) a tracker to record applications in. If it does not exist, ask once for:
+Look for the user's config at `$JD_RESUME_TAILOR_CONFIG` if that variable is set (`echo $JD_RESUME_TAILOR_CONFIG`; tools like jd-apply set it for unattended runs), otherwise at `~/.config/jd-resume-tailor/config.md`. When the variable is set, that file is the only config: don't open the default one or look for other banks, even if the bank it names looks like an example. It says where their bullet bank lives, how to build, where PDFs go, and (optionally) a tracker to record applications in. If it does not exist, ask once for:
 - the resume source: a bullet-bank file (this repo's `builder/` TOML format, see `builder/example/resume.toml`) **or** their own build script;
 - the output folder;
 then write the config so the next run skips the questions.
