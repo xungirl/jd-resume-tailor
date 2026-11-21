@@ -74,6 +74,12 @@ writer (your bank) ──> analysis.md + resume.pdf ──> script checks ──
 - **Reviewers.** Each runs as a fresh process, in a folder that holds only what it may see. The isolation comes from the filesystem, not from a prompt asking it not to look.
   - The HM reviewer gets `jd.md`, `resume.pdf` and its text.
   - The ATS reviewer gets the same plus the writer's `resume_source.md`, two text extractions, and the PDF's link targets.
+- **Your projects.** In settings, list project folders, GitHub repo URLs, or `github:yourname` (all your public, non-fork repos).
+  - Before each run, GitHub repos are shallow-cloned (with `gh`'s login if installed, so private repos work too).
+  - Each project gets a one-paragraph summary: languages, README, last commit, and whether your bank already has it.
+  - The writer may add a project that isn't on your resume yet, using only facts it verifies in that project's files. It cites the file for each fact and lists every new bullet so you can check it.
+  - Repos are read-only to the writer (Claude Code gets `Edit`/`Write` denied there), and reviewers never see them.
+- **Reset** stops a run and moves the job's folder to `~/.config/jd-tailor/trash/`, so you can start that posting over.
 - **Models.** You pick the model for the writer and for the reviewers. The default is the agent's best: Opus for Claude Code, V4 Pro for DeepSeek. Codex and Grok use their own defaults unless you name a model.
 - **Quick or thorough.**
   - Quick (the default) runs one round of reviews and one revision.

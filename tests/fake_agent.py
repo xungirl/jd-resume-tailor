@@ -49,6 +49,8 @@ if role.startswith('ROLE: writer'):
         'dropped': ['Pixel Pets: off-topic'], 'gaps': ['Kubernetes'], 'constraints': ['No visa sponsorship'],
         'unverified_numbers': ['14 minutes to 2 minutes (self-reported)'], 'questions': [],
         'bullets_changed': 1 if 'revision' in role else 0, 'touched_hard_requirement': False,
+        'new_from_projects': (json.loads((cwd / 'writer.json').read_text()).get('new_from_projects', []) if 'revision' in role and (cwd / 'writer.json').exists() else [{'project': 'telemetry-etl', 'bullet': 'Built a Beam pipeline for flight telemetry',
+                                'source': 'README.md'}] if './projects.md' in prompt and (cwd / 'projects.md').exists() else []),
         'summary': ('Revised: ' if 'revision' in role else '') + 'Backend resume led by Trailmap.'}))
     with open(cwd / 'calls.log', 'a') as f:
         f.write(role + ' | session=' + os.environ.get('FAKE_SESSION', '') + '\n')

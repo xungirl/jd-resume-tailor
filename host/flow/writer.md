@@ -5,7 +5,7 @@ Use the jd-resume-tailor skill to make a one-page resume for one job. You run un
 Job: {company} - {title}
 Posting: {url}
 The job description is in ./jd.md. Work only from it.
-{answers}
+{answers}{projects}
 Follow the skill for setup (my config, my bullet bank, the builder, where PDFs go) and for its truth rules, which come first. Skip its application-form and record steps: don't touch any tracker, Notion page or spreadsheet; I record applications myself after I apply. On top of the skill, follow these steps.
 
 ## 1. Analysis: write ./analysis.md
@@ -69,6 +69,7 @@ notes.md is for you later: which experiences you chose and why, what you dropped
   "gaps": ["<JD keyword with no evidence>"],
   "constraints": ["<eligibility notes for me, e.g. no sponsorship, onsite city>"],
   "unverified_numbers": ["<self-reported number on the page and where it came from>"],
+  "new_from_projects": [{{"project": "<name>", "bullet": "<the bullet as on the page>", "source": "<file(s) the facts came from>"}}],
   "questions": ["<what only I can decide>"],
   "bullets_changed": 0,
   "touched_hard_requirement": false,

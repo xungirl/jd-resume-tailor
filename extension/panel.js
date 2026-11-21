@@ -85,6 +85,7 @@ function renderAgents() {
   models($('writerModel'), $('writerCustom'), H.writer, H.writer_model);
   models($('reviewerModel'), $('reviewerCustom'), H.reviewer === 'same' ? H.writer : H.reviewer, H.reviewer_model);
   $('mode').value = H.mode || 'quick';
+  if (document.activeElement !== $('projects')) $('projects').value = (H.projects || []).join('\n');
   $('dsBox').hidden = !H.agents.find((a) => a.id === 'deepseek' && a.found);
   const warn = [];
   if (!H.skill) warn.push('The jd-resume-tailor skill is not installed. Get it at github.com/xungirl/jd-resume-tailor.');
@@ -108,6 +109,12 @@ async function saveSettings(patch) {
 $('writer').onchange = () => saveSettings({ writer: $('writer').value });
 $('reviewer').onchange = () => saveSettings({ reviewer: $('reviewer').value });
 $('mode').onchange = () => saveSettings({ mode: $('mode').value });
+$('saveProjects').onclick = async () => {
+  const items = $('projects').value.split('\n').map((x) => x.trim()).filter(Boolean);
+  const r = await native({ cmd: 'settings', set: { projects: items } });
+  $('projMsg').textContent = r.ok ? `Saved ${r.projects.length}` : r.error;
+  if (r.ok) await hello();
+};
 for (const role of ['writer', 'reviewer']) {
   const sel = $(role + 'Model'), custom = $(role + 'Custom');
   sel.onchange = () => {
@@ -313,7 +320,8 @@ function showJob(j) {
     $('rLead').textContent = r.lead ? `Leads with: ${r.lead}` : '';
     const box = $('rLists');
     box.innerHTML = '';
-    for (const part of [list('Script check warnings', r.warnings), list('Check these numbers: you reported them, the bank shows no re-measurement', r.unverified_numbers),
+    const fresh = (r.new_from_projects || []).map((x) => `${x.project}: ${x.bullet} (from ${x.source})`);
+    for (const part of [list('New from your projects: check each one against its source', fresh), list('Script check warnings', r.warnings), list('Check these numbers: you reported them, the bank shows no re-measurement', r.unverified_numbers),
       list('Eligibility notes (for the form)', r.constraints), list('Gaps: the JD wants it, your bank has no evidence', r.gaps),
       list('Left out', r.dropped)]) if (part) box.appendChild(part);
     const rv = $('reviews');
@@ -383,6 +391,17 @@ $('downloadPdf').onclick = async () => {
   a.click();
 };
 $('reveal').onclick = () => native({ cmd: 'reveal', id: shown.id });
+$('reset').onclick = async () => {
+  if (!shown) return;
+  if (!confirm('Start this posting over? The current run stops and its files move to the trash folder.')) return;
+  const r = await native({ cmd: 'reset', id: shown.id });
+  if (!r.ok) return note(r.error, 'red');
+  clearTimeout(poll);
+  shown = null;
+  job = null;
+  $('job').hidden = true;
+  await loadPage();
+};
 $('cancel').onclick = async () => { const r = await native({ cmd: 'cancel', id: shown.id }); if (r.ok) showJob(r.job); };
 $('sendAnswer').onclick = async () => {
   const text = $('answer').value.trim();

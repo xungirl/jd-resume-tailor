@@ -144,6 +144,44 @@ class Host(unittest.TestCase):
         self.assertEqual(cmd[cmd.index('--resume') + 1], 'abc')
 
 
+class Projects(unittest.TestCase):
+    def test_parse_sources(self):
+        d = Path(tempfile.mkdtemp(dir=TMP))
+        self.assertEqual(jdt.parse_source('https://github.com/xungirl/jd-tailor'), ('repo', 'xungirl', 'jd-tailor'))
+        self.assertEqual(jdt.parse_source('github.com/a-b/c.d.git'), ('repo', 'a-b', 'c.d'))
+        self.assertEqual(jdt.parse_source('github:xungirl'), ('user', 'xungirl'))
+        self.assertEqual(jdt.parse_source('https://github.com/xungirl'), ('user', 'xungirl'))
+        self.assertEqual(jdt.parse_source(str(d)), ('dir', d.resolve()))
+        for bad in ('relative/path', '/no/such/dir', 'https://evil.com/x/y', 'github:../../etc', ''):
+            self.assertIsNone(jdt.parse_source(bad), bad)
+        self.assertFalse(jdt.handle({'cmd': 'settings', 'set': {'projects': ['rm -rf /']}})['ok'])
+
+    def test_project_summary(self):
+        d = Path(tempfile.mkdtemp(dir=TMP)) / 'telemetry-etl'
+        (d / 'src').mkdir(parents=True)
+        (d / 'README.md').write_text('# telemetry-etl\n\n![badge](x)\nA Beam pipeline that cleans drone flight telemetry.\n')
+        (d / 'src' / 'a.py').write_text('x=1')
+        (d / 'src' / 'b.py').write_text('x=1')
+        (d / 'BENCHMARK.md').write_text('p50 12 ms')
+        out = jdt.describe_project(d, 'bank text mentions Trailmap only')
+        self.assertIn('### telemetry-etl', out)
+        self.assertIn('in my bank already: no', out)
+        self.assertIn('Python (2)', out)
+        self.assertIn('evidence files: BENCHMARK.md', out)
+        self.assertIn('A Beam pipeline that cleans drone flight telemetry.', out)
+        self.assertNotIn('badge', out)
+        self.assertIn('in my bank already: yes', jdt.describe_project(d, 'telemetry-etl: built a pipeline'))
+
+    def test_repos_are_readable_not_editable(self):
+        cfg = dict(jdt.DEFAULTS, _project_dirs=[Path('/tmp/proj a')])
+        cmd, _ = jdt.build_command('claude', 'hi', TMP, True, cfg)
+        self.assertIn('/tmp/proj a', cmd[cmd.index('--add-dir'):])
+        dis = cmd[cmd.index('--disallowedTools') + 1:]
+        self.assertEqual(dis[:2], ['Edit(//tmp/proj a/**)', 'Write(//tmp/proj a/**)'])
+        cmd, _ = jdt.build_command('claude', 'hi', TMP, False, cfg)
+        self.assertNotIn('/tmp/proj a', cmd)  # reviewers never see your repos
+
+
 class Flow(unittest.TestCase):
     def setUp(self):
         jdt.save_config({'mode': 'thorough', 'agents': {'claude': {'command': FAKE}, 'codex': {'command': FAKE}}})
@@ -192,6 +230,26 @@ class Flow(unittest.TestCase):
         self.assertEqual((j['writer_model'], j['reviewer_model'], j['mode']), ('opus', '', 'quick'))
         self.assertEqual(j['cost'], 0.05 * 2 + 0.02 * 2)  # cost read from the stream's result event
         self.assertTrue(j['has_pdf'])
+
+    def test_projects_feed_the_writer_and_reset(self):
+        proj = Path(tempfile.mkdtemp(dir=TMP)) / 'telemetry-etl'
+        proj.mkdir()
+        (proj / 'README.md').write_text('# telemetry-etl\nA Beam pipeline for drone flight telemetry.\n')
+        jdt.save_config({'mode': 'quick', 'projects': [str(proj)], 'agents': {'claude': {'command': FAKE}, 'codex': {'command': FAKE}}})
+        try:
+            r = jdt.handle({'cmd': 'tailor', 'job': {'url': 'https://example.com/jobs/4', 'company': 'Proj Co', 'title': 'Intern', 'text': JD_TEXT}})
+            j = wait(r['id'])
+        finally:
+            jdt.save_config({'projects': []})
+        self.assertEqual(j['stages'][0]['key'], 'projects')
+        self.assertEqual(j['stages'][0]['detail'], '1 projects')
+        self.assertIn('### telemetry-etl', (Path(j['folder']) / 'projects.md').read_text())
+        self.assertEqual(j['result']['new_from_projects'][0]['project'], 'telemetry-etl')
+        self.assertFalse((Path(j['folder']) / 'reviews' / 'hm_1' / 'projects.md').exists())
+        self.assertTrue(jdt.handle({'cmd': 'reset', 'id': j['id']})['ok'])
+        self.assertFalse(Path(j['folder']).exists())
+        self.assertTrue(any(p.name.startswith(j['id']) for p in (jdt.home() / 'trash').iterdir()))
+        self.assertIsNone(jdt.handle({'cmd': 'find', 'url': 'https://example.com/jobs/4'})['job'])
 
     def test_question_then_answer(self):
         r = jdt.handle({'cmd': 'tailor', 'job': {'url': 'https://example.com/jobs/2', 'company': 'Gov Co', 'title': 'Intern',

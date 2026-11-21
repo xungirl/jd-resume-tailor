@@ -25,6 +25,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.request
 from pathlib import Path
 
 VERSION = '0.2.0'
@@ -48,6 +49,7 @@ DEFAULTS = {
     'extra_dirs': [],          # more folders the writer may read (your bank and build script are found from the skill config)
     'tailor_config': '',       # use this jd-resume-tailor config instead of the default (tests use a made-up person)
     'deepseek_key': '',
+    'projects': [],            # your project folders, GitHub repo URLs, or github:<user>; the writer may mine them
     'agents': {},              # per-agent overrides, e.g. {"grok": {"model": "grok-4.6"}} or a full {"command": [...]}
 }
 
@@ -137,6 +139,139 @@ def reading_dirs(cfg) -> list:
     return out
 
 
+# ---------------------------------------------------------------- your projects
+
+GH_REPO = re.compile(r'^(?:https?://)?github\.com/([A-Za-z0-9-]{1,39})/([A-Za-z0-9._-]{1,100}?)(?:\.git)?/?$')
+GH_USER = re.compile(r'^(?:github:|(?:https?://)?github\.com/)([A-Za-z0-9-]{1,39})/?$')
+
+
+def parse_source(src: str):
+    """('dir', Path) | ('repo', owner, name) | ('user', login), or None."""
+    src = (src or '').strip()
+    if not src:
+        return None
+    m = GH_REPO.match(src)
+    if m:
+        return ('repo', m.group(1), m.group(2))
+    m = GH_USER.match(src)
+    if m:
+        return ('user', m.group(1))
+    p = Path(src).expanduser()
+    if p.is_absolute() and p.is_dir():
+        return ('dir', p.resolve())
+    return None
+
+
+def _git(*args, cwd=None, timeout=180):
+    return subprocess.run(['git', *args], cwd=cwd, capture_output=True, text=True, timeout=timeout)
+
+
+def fetch_repo(owner: str, name: str, log=None) -> Path:
+    """A shallow, read-only copy of a GitHub repo under ~/.config/jd-tailor/repos (pulled if it exists).
+    Uses gh's login when gh is installed, so your private repos work too."""
+    d = home() / 'repos' / f'{owner}__{name}'
+    try:
+        if (d / '.git').exists():
+            _git('pull', '--ff-only', '--depth', '1', cwd=d)
+        else:
+            d.parent.mkdir(parents=True, exist_ok=True)
+            if shutil.which('gh'):
+                p = subprocess.run(['gh', 'repo', 'clone', f'{owner}/{name}', str(d), '--', '--depth', '1'],
+                                   capture_output=True, text=True, timeout=180)
+            else:
+                p = _git('clone', '--depth', '1', f'https://github.com/{owner}/{name}.git', str(d))
+            if p.returncode and log:
+                log(f'could not clone {owner}/{name}: {p.stderr.strip()[-200:]}')
+    except (OSError, subprocess.TimeoutExpired) as e:
+        if log:
+            log(f'could not fetch {owner}/{name}: {e}')
+    return d
+
+
+def user_repos(login: str, limit=20) -> list:
+    """Public, non-fork, non-archived repos of a GitHub user, most recently pushed first."""
+    url = f'https://api.github.com/users/{login}/repos?per_page=100&sort=pushed'
+    req = urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'jd-tailor'})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        items = json.loads(r.read())
+    return [x['name'] for x in items if not x.get('fork') and not x.get('archived')][:limit]
+
+
+def project_dirs(cfg, log=None) -> list:
+    out = []
+    for src in cfg.get('projects', []):
+        s = parse_source(src)
+        if not s:
+            continue
+        if s[0] == 'dir':
+            out.append(s[1])
+        elif s[0] == 'repo':
+            out.append(fetch_repo(s[1], s[2], log))
+        else:
+            try:
+                for name in user_repos(s[1]):
+                    out.append(fetch_repo(s[1], name, log))
+            except OSError as e:
+                if log:
+                    log(f'could not list github:{s[1]}: {e}')
+    seen, res = set(), []
+    for d in out:
+        if d.exists() and d not in seen:
+            seen.add(d)
+            res.append(d)
+    return res
+
+
+CODE_EXT = {'.py': 'Python', '.go': 'Go', '.ts': 'TypeScript', '.tsx': 'TypeScript', '.js': 'JavaScript', '.jsx': 'JavaScript',
+            '.java': 'Java', '.kt': 'Kotlin', '.swift': 'Swift', '.rs': 'Rust', '.cpp': 'C++', '.cc': 'C++', '.c': 'C',
+            '.rb': 'Ruby', '.cs': 'C#', '.scala': 'Scala', '.sql': 'SQL', '.ipynb': 'Jupyter'}
+SKIP_DIRS = {'.git', 'node_modules', '.venv', 'venv', '__pycache__', 'dist', 'build', '.next', 'target', 'vendor'}
+
+
+def describe_project(d: Path, bank_text: str) -> str:
+    langs = {}
+    n = 0
+    for root, dirs, files in os.walk(d):
+        dirs[:] = [x for x in dirs if x not in SKIP_DIRS and not x.startswith('.')]
+        for f in files:
+            lang = CODE_EXT.get(Path(f).suffix.lower())
+            if lang:
+                langs[lang] = langs.get(lang, 0) + 1
+            n += 1
+            if n > 5000:
+                break
+    readme = next((d / f for f in ('README.md', 'README.rst', 'README.txt', 'README', 'readme.md') if (d / f).exists()), None)
+    summary = ''
+    if readme:
+        lines = [l.strip() for l in readme.read_text(errors='replace').splitlines()]
+        lines = [l for l in lines if l and not l.startswith(('![', '<', '[!', '```', '|', '---'))]
+        summary = ' '.join(lines[:4])[:300]
+    p = _git('log', '-1', '--format=%cs', cwd=d, timeout=20) if (d / '.git').exists() else None
+    last = p.stdout.strip() if p and p.returncode == 0 else ''
+    evidence = [f for f in ('BENCHMARK.md', 'RESULTS.md', 'results', 'benchmarks', 'bench', 'eval', 'docs') if (d / f).exists()]
+    name = d.name.split('__')[-1]
+    on_resume = 'yes' if re.search(r'(?<![A-Za-z0-9])' + re.escape(name) + r'(?![A-Za-z0-9])', bank_text, re.I) else 'no'
+    top = ', '.join(f'{k} ({v})' for k, v in sorted(langs.items(), key=lambda x: -x[1])[:4]) or 'no code files found'
+    return (f'### {name}\n- path: {d}\n- in my bank already: {on_resume}\n- languages: {top}\n'
+            f'- last commit: {last or "unknown"}\n- evidence files: {", ".join(evidence) or "none"}\n- README: {summary or "(none)"}\n')
+
+
+def project_index(dirs, cfg) -> str:
+    bank = ''
+    tc = tailor_config_path(cfg)
+    for d in reading_dirs(cfg):
+        if d in (skill_dir().parent.parent if skill_dir() else None,):
+            continue
+        for f in list(d.glob('*.toml'))[:5] + list(d.glob('*.py'))[:5] + list(d.glob('*.md'))[:5]:
+            try:
+                bank += f.read_text(errors='replace')[:200000]
+            except OSError:
+                pass
+    if tc.exists():
+        bank += tc.read_text()
+    return '\n'.join(describe_project(d, bank) for d in dirs)
+
+
 # ---------------------------------------------------------------- agents
 
 def _works(binary: str) -> bool:
@@ -176,7 +311,8 @@ def build_command(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, 
     if over.get('command'):  # tests, or your own wrapper
         fill = lambda s: s.replace('{prompt}', prompt).replace('{cwd}', str(cwd)).replace('{mode}', 'write' if writing else 'review')
         return [fill(x) for x in over['command']], env
-    dirs = [str(d) for d in reading_dirs(cfg)] if writing else []
+    repos = [str(d) for d in cfg.get('_project_dirs', [])] if writing else []
+    dirs = ([str(d) for d in reading_dirs(cfg)] + repos) if writing else []
     if agent in ('claude', 'deepseek'):
         tools = 'Bash Read Write Edit Glob Grep Skill' if writing else 'Read Glob Bash(pdftotext:*)'
         cmd = ['claude', '-p', prompt, '--allowedTools', tools,
@@ -186,6 +322,8 @@ def build_command(agent: str, prompt: str, cwd: Path, writing: bool, cfg: dict, 
             cmd += ['--permission-mode', 'acceptEdits']
         for d in dirs:
             cmd += ['--add-dir', d]
+        if repos:  # your project repos are evidence to read, never to change
+            cmd += ['--disallowedTools', *[f'{t}(/{r}/**)' for r in repos for t in ('Edit', 'Write')]]
         if session:
             cmd += ['--resume', session]
         model = model_for(agent, writing, cfg)
@@ -515,11 +653,15 @@ def write_run(job: Job, cfg: dict, prompt: str, key: str, label: str) -> dict:
     job.stage(key, label, 'running', st['writer'])
     # Claude Code and Grok continue the same session, so the writer remembers why it chose what it chose.
     session = st.get('session') if key != 'write' and st['writer'] in ('claude', 'deepseek', 'grok') else None
+    before = read_json(job.d / 'writer.json', {}) or {}
     res = run_agent(st['writer'], prompt, job.d, True, cfg, job.d / 'agent.log', session, on_activity=job.activity(key))
     if res['session']:
         st['session'] = res['session']
     st['cost'] = (st.get('cost') or 0) + (res['cost'] or 0)
     w = read_json(job.d / 'writer.json', {}) or {}
+    if 'new_from_projects' not in w and before.get('new_from_projects'):  # a revision that didn't restate them
+        w['new_from_projects'] = before['new_from_projects']
+        write_json(job.d / 'writer.json', w)
     ok = res['ok'] and (job.d / 'resume.pdf').exists()
     job.stage(key, label, 'done' if ok or w.get('status') in ('needs_user', 'skip') else 'failed',
               w.get('summary', '')[:300] if ok else (res['error'] or 'no resume.pdf was written')[:300])
@@ -571,6 +713,17 @@ def work(d: Path):
         lock.unlink(missing_ok=True)
 
 
+PROJECTS_NOTE = """
+## My projects, including ones not on my resume
+
+./projects.md lists my project folders: languages, README summary, last commit, whether my bank already has it. If a project there proves this JD's hard requirements or "what the team builds" better than what my bank has, you may add it:
+- Read its README, any results/benchmark files and the code itself. These folders are read-only: never change anything in them.
+- Write bullets only from facts you verified in those files. Every number must appear in a file there (a README, a results file, a test, a config), never estimated. If a result was never measured, describe what was built, without a number.
+- Add the project and its bullets to my bank as the skill says (back the bank up first; targeted edits), with a comment naming the source file for each fact, and use them in this variant.
+- List every bullet you added under "new_from_projects" in writer.json, so I can check each one.
+"""
+
+
 def flow(job: Job, cfg: dict):
     st = job.state
     st.update(status='running', started=now(), error='', stages=[], cost=0, pid=os.getpid())
@@ -580,8 +733,18 @@ def flow(job: Job, cfg: dict):
     answers = (job.d / 'my_answers.md').read_text() if (job.d / 'my_answers.md').exists() else ''
     if answers:
         answers = '\nMy answers to your earlier questions (they decide what you asked):\n' + answers + '\n'
+    projects = ''
+    if cfg.get('projects'):
+        job.stage('projects', 'Reading your project repos', 'running', ', '.join(cfg['projects'])[:200])
+        notes = []
+        dirs = project_dirs(cfg, notes.append)
+        cfg['_project_dirs'] = dirs
+        (job.d / 'projects.md').write_text(project_index(dirs, cfg))
+        job.stage('projects', 'Reading your project repos', 'done',
+                  f'{len(dirs)} projects' + (f'; {"; ".join(notes)}' if notes else ''))
+        projects = PROJECTS_NOTE
     w = write_run(job, cfg, fmt('writer.md', jobdir=job.d, company=st['company'], title=st['title'], url=st['url'],
-                                answers=answers, check=f'python3 {CHECK}'), 'write', 'Analysis and first draft')
+                                answers=answers, check=f'python3 {CHECK}', projects=projects), 'write', 'Analysis and first draft')
     info = w['writer']
     if info.get('status') in ('needs_user', 'skip'):
         return job.finish(info['status'], result=result(job, info, {}, 'n/a'))
@@ -632,6 +795,7 @@ def result(job: Job, info: dict, verdicts: dict, gate: str, warnings=()) -> dict
         'direction': info.get('direction', ''), 'lead': info.get('lead', ''), 'summary': info.get('summary', ''),
         'gaps': info.get('gaps', []), 'constraints': info.get('constraints', []), 'dropped': info.get('dropped', []),
         'unverified_numbers': info.get('unverified_numbers', []), 'questions': info.get('questions', []),
+        'new_from_projects': info.get('new_from_projects', []),
         'warnings': list(warnings), 'pdf': (job.d / 'resume.pdf').exists(),
     }
     write_json(job.d / 'result.json', r)
@@ -660,7 +824,8 @@ def handle(msg: dict) -> dict:
         s = skill_dir()
         return {'ok': True, 'version': VERSION, 'home': str(home()), 'agents': agent_status(cfg),
                 'writer': cfg['writer'], 'reviewer': cfg['reviewer'], 'mode': cfg['mode'],
-                'writer_model': cfg['writer_model'], 'reviewer_model': cfg['reviewer_model'], 'skill': str(s) if s else '',
+                'writer_model': cfg['writer_model'], 'reviewer_model': cfg['reviewer_model'], 'projects': cfg['projects'],
+                'skill': str(s) if s else '',
                 'tailor_config': str(tailor_config_path(cfg)) if tailor_config_path(cfg).exists() else '',
                 'poppler': bool(shutil.which('pdftotext'))}
     if cmd == 'settings':
@@ -680,8 +845,14 @@ def handle(msg: dict) -> dict:
             return {'ok': False, 'error': 'unknown agent'}
         if patch.get('reviewer') and patch['reviewer'] not in list(AGENTS) + ['same']:
             return {'ok': False, 'error': 'unknown agent'}
+        if isinstance((msg.get('set') or {}).get('projects'), list):
+            items = [str(x).strip() for x in msg['set']['projects'] if str(x).strip()][:30]
+            bad = [x for x in items if not parse_source(x)]
+            if bad:
+                return {'ok': False, 'error': 'not a folder, GitHub repo URL or github:<user>: ' + ', '.join(bad)}
+            patch['projects'] = items
         cfg = save_config(patch)
-        return {'ok': True, 'writer': cfg['writer'], 'reviewer': cfg['reviewer'], 'mode': cfg['mode'],
+        return {'ok': True, 'projects': cfg['projects'], 'writer': cfg['writer'], 'reviewer': cfg['reviewer'], 'mode': cfg['mode'],
                 'writer_model': cfg['writer_model'], 'reviewer_model': cfg['reviewer_model'], 'agents': agent_status(cfg)}
     if cmd == 'tailor':
         job = msg.get('job') or {}
@@ -731,6 +902,19 @@ def handle(msg: dict) -> dict:
         write_json(d / 'state.json', st)
         spawn_worker(d.name)
         return {'ok': True, 'job': view(d)}
+    if cmd == 'reset':  # stop it and move the job aside, so this posting can start fresh
+        d = job_path(msg.get('id', ''))
+        st = read_json(d / 'state.json', {}) or {}
+        if alive(st.get('pid')):
+            try:
+                os.killpg(st['pid'], signal.SIGTERM)
+            except OSError:
+                pass
+        if d.exists():
+            trash = jobs_dir().parent / 'trash'
+            trash.mkdir(exist_ok=True)
+            shutil.move(str(d), str(trash / f'{d.name}_{time.strftime("%Y%m%d-%H%M%S")}'))
+        return {'ok': True}
     if cmd == 'cancel':
         d = job_path(msg.get('id', ''))
         st = read_json(d / 'state.json', {}) or {}

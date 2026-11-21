@@ -39,6 +39,11 @@
       </select>
     </label>
     <p class="muted small">A different reviewer than the writer catches more: it doesn't share the writer's blind spots.</p>
+    <label>Your projects <span class="muted">(one per line: a folder, a GitHub repo URL, or github:yourname)</span>
+      <textarea id="projects" rows="3" placeholder="~/flowbeat&#10;https://github.com/you/raft-kv&#10;github:you"></textarea>
+    </label>
+    <div class="row"><button id="saveProjects" class="small">Save projects</button><span id="projMsg" class="muted small"></span></div>
+    <p class="muted small">The writer may add a project that isn't on your resume yet, using only facts it finds in that project's files. It reads them, never changes them.</p>
     <div id="dsBox" hidden>
       <label>DeepSeek API key <span class="muted">(stored only on this computer)</span>
         <div class="row"><input id="dsKey" type="password" placeholder="sk-…" autocomplete="off"><button id="saveDs">Save</button></div>
@@ -91,6 +96,7 @@
       <button id="downloadPdf" hidden>Download</button>
       <button id="reveal" hidden>Show in Finder</button>
       <button id="cancel" hidden>Stop</button>
+      <button id="reset" title="Stop if running and start this posting over">Reset</button>
     </div>
   </section>
 

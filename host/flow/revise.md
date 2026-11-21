@@ -10,6 +10,6 @@ How to handle them:
 - ATS parsing and field problems: fix special characters, ligatures, links, date formats in this variant. If the problem is in the builder's template itself, report it under "questions" instead of editing the builder.
 - Then rebuild, copy to ./resume.pdf, run `{check} ./resume.pdf ./analysis.md` until it passes, and update ./resume_source.md and ./notes.md.
 
-Last, rewrite ./writer.json in the same format as before. Set "bullets_changed" to how many bullets you changed in this revision, and "touched_hard_requirement" to true if you changed a bullet that proves a hard requirement.
+Last, rewrite ./writer.json in the same format as before (keep "new_from_projects" listing every bullet from my projects that is still on the page). Set "bullets_changed" to how many bullets you changed in this revision, and "touched_hard_requirement" to true if you changed a bullet that proves a hard requirement.
 
 {reviews}
