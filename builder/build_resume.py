@@ -74,6 +74,9 @@ pdfmetrics.registerFontFamily(FONT['regular'], normal=FONT['regular'], bold=FONT
                               italic=FONT['italic'], boldItalic=FONT['bolditalic'])  # makes <b>/<i> work
 
 
+TAG_COLOR = os.environ.get('TAG_COLOR', '#5A5A5A')  # tags dimmer than the description
+
+
 def link(url, label):
     return f'<link href="{url}" color="{LINK}">{label}</link>'
 
@@ -158,7 +161,7 @@ def build(data, name, spec, outdir):
             row(head, proj.get('dates', ''), gap=1)
         else:
             # bold name — regular description | italic tags, links right-aligned like the date column above
-            head = f"<b>{proj['name']}</b> — {proj['desc']}" + (f" | <i>{tags}</i>" if tags else '')
+            head = f"<b>{proj['name']}</b> — {proj['desc']}" + (f' <font color="{TAG_COLOR}">| <i>{tags}</i></font>' if tags else '')
             plain = ' · '.join(l for _, l in links)
             rw = pdfmetrics.stringWidth(plain, FONT['regular'], BODY) if links else 0
             hp = Paragraph(head, st['body']); _, h = hp.wrap(TEXT_WIDTH - rw - (14 if links else 0), HEIGHT)
